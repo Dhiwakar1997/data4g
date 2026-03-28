@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataForge — Full DB Analysis & Action Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070c;--bg2:#0d0d14;--card:#111119;--card2:#15151f;
+  --acc:#00e5a0;--acc2:#00e5a020;--acc3:#00e5a050;
+  --p:#7c6cf0;--p2:#7c6cf015;--p3:#7c6cf050;
+  --pk:#fd79a8;--pk2:#fd79a815;
+  --bl:#4facfe;--bl2:#4facfe15;
+  --or:#fab1a0;--or2:#e1700615;
+  --yl:#ffeaa7;--yl2:#ffeaa715;
+  --cy:#55efc4;--cy2:#55efc415;
+  --tx:#e4e4f0;--tx2:#9090a8;--tx3:#5a5a72;
+  --bd:#1c1c2a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;line-height:1.7;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--acc3);border-radius:3px}
+
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(var(--bd) 1px,transparent 1px),linear-gradient(90deg,var(--bd) 1px,transparent 1px);background-size:50px 50px;opacity:.2;z-index:0;pointer-events:none}
+.grid-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,#7c6cf008,transparent),radial-gradient(ellipse 50% 40% at 80% 100%,#00e5a006,transparent)}
+
+.particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.particle{position:absolute;border-radius:50%;animation:float linear infinite;opacity:0}
+@keyframes float{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:.8}90%{opacity:.8}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+/* HERO */
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:2rem}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;background:var(--acc2);border:1px solid var(--acc3);border-radius:100px;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--acc);text-transform:uppercase;letter-spacing:2px;margin-bottom:2rem;animation:fsu .8s ease both}
+.hero-badge .dot{width:6px;height:6px;background:var(--acc);border-radius:50%;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--acc3)}50%{opacity:.6;box-shadow:0 0 0 8px transparent}}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(2.8rem,7vw,6.5rem);font-weight:800;line-height:1.05;letter-spacing:-3px;animation:fsu .8s ease .1s both}
+.hero h1 .hl{background:linear-gradient(135deg,var(--acc),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{max-width:640px;font-size:1.1rem;color:var(--tx2);margin-top:1.5rem;animation:fsu .8s ease .2s both}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:2rem;animation:fsu .8s ease .3s both}
+.hero-tag{padding:5px 12px;border:1px solid var(--bd);border-radius:6px;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;transition:all .3s}
+.hero-tag:hover{border-color:var(--acc);color:var(--acc)}
+.scroll-hint{position:absolute;bottom:2rem;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tx3);font-size:.65rem;letter-spacing:2px;text-transform:uppercase;animation:fsu .8s ease .5s both}
+.scroll-hint .line{width:1px;height:36px;background:linear-gradient(to bottom,var(--acc),transparent);animation:sp 2s ease infinite}
+@keyframes sp{0%,100%{opacity:.3;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
+@keyframes fsu{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+/* NAV */
+.nav-dots{position:fixed;right:1.2rem;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:10px}
+.nav-dot{width:7px;height:7px;border-radius:50%;border:1px solid var(--tx3);background:transparent;cursor:pointer;transition:all .3s;position:relative}
+.nav-dot.active{background:var(--acc);border-color:var(--acc);box-shadow:0 0 8px var(--acc3)}
+.nav-dot::after{content:attr(data-label);position:absolute;right:18px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:.55rem;color:var(--tx3);white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+.nav-dot:hover::after{opacity:1}
+
+/* SECTIONS */
+.section{position:relative;z-index:1;max-width:1260px;margin:0 auto;padding:5rem 2rem}
+.section-label{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--acc);letter-spacing:3px;text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:10px}
+.section-label::before{content:'';width:24px;height:1px;background:var(--acc)}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,3.5vw,3rem);font-weight:700;letter-spacing:-1.5px;margin-bottom:.8rem}
+.section-desc{color:var(--tx2);max-width:620px;margin-bottom:2.5rem;font-size:1rem}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(35px);transition:all .7s cubic-bezier(.16,1,.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.stagger>*{opacity:0;transform:translateY(18px)}
+.stagger.visible>*{animation:fsu .45s ease forwards}
+.stagger.visible>*:nth-child(1){animation-delay:0s}.stagger.visible>*:nth-child(2){animation-delay:.05s}.stagger.visible>*:nth-child(3){animation-delay:.1s}.stagger.visible>*:nth-child(4){animation-delay:.15s}.stagger.visible>*:nth-child(5){animation-delay:.2s}.stagger.visible>*:nth-child(6){animation-delay:.25s}.stagger.visible>*:nth-child(7){animation-delay:.3s}.stagger.visible>*:nth-child(8){animation-delay:.35s}.stagger.visible>*:nth-child(9){animation-delay:.4s}.stagger.visible>*:nth-child(10){animation-delay:.45s}.stagger.visible>*:nth-child(11){animation-delay:.5s}.stagger.visible>*:nth-child(12){animation-delay:.55s}
+
+/* DB CLASSIFICATION */
+.db-class-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem}
+.db-class-card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:1.8rem;transition:all .35s;position:relative;overflow:hidden}
+.db-class-card:hover{border-color:var(--acc3);transform:translateY(-3px);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.db-class-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;transform:scaleX(0);transform-origin:left;transition:transform .4s}
+.db-class-card:hover::before{transform:scaleX(1)}
+.db-class-card.sql::before{background:linear-gradient(90deg,var(--bl),var(--cy))}
+.db-class-card.nosql::before{background:linear-gradient(90deg,var(--acc),#20bf6b)}
+.db-class-card.mem::before{background:linear-gradient(90deg,var(--or),var(--yl))}
+.db-class-card.graph::before{background:linear-gradient(90deg,var(--p),var(--pk))}
+.db-class-card.vector::before{background:linear-gradient(90deg,var(--pk),#e84393)}
+.db-class-card.ts::before{background:linear-gradient(90deg,var(--cy),var(--bl))}
+.db-class-card.search::before{background:linear-gradient(90deg,var(--yl),var(--or))}
+
+.db-class-header{display:flex;align-items:center;gap:10px;margin-bottom:.8rem}
+.db-class-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.db-class-icon.sql{background:var(--bl2)}.db-class-icon.nosql{background:var(--acc2)}.db-class-icon.mem{background:var(--or2)}.db-class-icon.graph{background:var(--p2)}.db-class-icon.vector{background:var(--pk2)}.db-class-icon.ts{background:var(--cy2)}.db-class-icon.search{background:var(--yl2)}
+.db-class-card h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700}
+.db-class-tag{font-family:'Space Mono',monospace;font-size:.6rem;padding:2px 8px;border-radius:4px;letter-spacing:1px}
+.db-class-tag.sql-t{background:var(--bl2);color:var(--bl)}.db-class-tag.nosql-t{background:var(--acc2);color:var(--acc)}
+.db-class-desc{font-size:.8rem;color:var(--tx3);margin-bottom:1rem;line-height:1.5}
+.db-list{display:flex;flex-direction:column;gap:.5rem}
+.db-entry{display:flex;align-items:center;justify-content:space-between;padding:.5rem .7rem;background:var(--bg2);border-radius:8px;font-size:.8rem;transition:background .2s}
+.db-entry:hover{background:var(--card2)}
+.db-entry-name{font-weight:600;display:flex;align-items:center;gap:6px}
+.db-entry-pop{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--tx3);display:flex;align-items:center;gap:4px}
+.pop-bar{width:50px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;position:relative}
+.pop-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+
+/* MASTER TABLE */
+.master-table-wrap{overflow-x:auto;margin:2rem 0;border-radius:14px;border:1px solid var(--bd);background:var(--card)}
+.master-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:1100px}
+.master-table thead{background:var(--bg2);position:sticky;top:0;z-index:2}
+.master-table th{padding:.8rem 1rem;text-align:left;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--bd)}
+.master-table td{padding:.7rem 1rem;border-bottom:1px solid var(--bd);color:var(--tx2);vertical-align:top}
+.master-table tr:last-child td{border-bottom:none}
+.master-table tr:hover td{background:var(--bg2)}
+.master-table .db-name{font-weight:700;color:var(--tx);white-space:nowrap}
+.tag{display:inline-block;padding:1px 8px;border-radius:3px;font-family:'Space Mono',monospace;font-size:.6rem;font-weight:700;white-space:nowrap}
+.tag-sql{background:var(--bl2);color:var(--bl)}.tag-nosql{background:var(--acc2);color:var(--acc)}.tag-mem{background:var(--or2);color:var(--or)}.tag-graph{background:var(--p2);color:#a29bfe}.tag-vector{background:var(--pk2);color:var(--pk)}.tag-ts{background:var(--cy2);color:var(--cy)}.tag-search{background:var(--yl2);color:var(--yl)}
+.tag-disk{background:#2d3436;color:#dfe6e9}.tag-memory{background:#e1700620;color:var(--or)}
+
+/* COST COMPARISON VISUAL */
+.cost-section{margin:3rem 0}
+.cost-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.5rem}
+.cost-tab{padding:6px 16px;border:1px solid var(--bd);border-radius:8px;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--tx3);cursor:pointer;transition:all .3s;letter-spacing:.5px}
+.cost-tab.active{background:var(--acc2);border-color:var(--acc3);color:var(--acc)}
+.cost-tab:hover{border-color:var(--acc3)}
+.cost-panel{display:none}
+.cost-panel.active{display:block}
+.cost-bars-horizontal{display:flex;flex-direction:column;gap:.7rem}
+.cost-h-bar{display:flex;align-items:center;gap:12px}
+.cost-h-label{width:140px;font-size:.78rem;font-weight:600;text-align:right;flex-shrink:0}
+.cost-h-track{flex:1;height:28px;background:var(--bg2);border-radius:6px;overflow:hidden;position:relative}
+.cost-h-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;color:var(--bg);transition:width 1.2s cubic-bezier(.16,1,.3,1)}
+.cost-h-fill.sql-c{background:linear-gradient(90deg,var(--bl),#74b9ff)}.cost-h-fill.nosql-c{background:linear-gradient(90deg,#00b894,var(--acc))}.cost-h-fill.graph-c{background:linear-gradient(90deg,var(--p),#a29bfe)}.cost-h-fill.vector-c{background:linear-gradient(90deg,#e84393,var(--pk))}.cost-h-fill.mem-c{background:linear-gradient(90deg,#e17006,var(--or))}.cost-h-fill.ts-c{background:linear-gradient(90deg,#00cec9,var(--cy))}.cost-h-fill.search-c{background:linear-gradient(90deg,#fdcb6e,var(--yl))}
+
+/* HIERARCHY */
+.hierarchy{display:flex;flex-direction:column;gap:2px;margin:2rem 0}
+.hier-row{display:flex;align-items:stretch;min-height:52px}
+.hier-label{width:100px;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:flex-end;padding-right:1rem;flex-shrink:0;text-align:right}
+.hier-boxes{display:flex;gap:3px;flex:1;flex-wrap:wrap}
+.hier-box{flex:1;min-width:80px;padding:.6rem .8rem;font-size:.72rem;font-weight:500;text-align:center;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .25s;cursor:default}
+.hier-box:hover{transform:scale(1.03)}
+.hier-box small{font-size:.55rem;opacity:.6}
+.hier-box.g{background:#00e5a010;border:1px solid #00e5a025;color:#00e5a0}
+.hier-box.b{background:#4facfe10;border:1px solid #4facfe25;color:#4facfe}
+.hier-box.v{background:#7c6cf010;border:1px solid #7c6cf025;color:#a29bfe}
+.hier-box.r{background:#fd79a810;border:1px solid #fd79a825;color:#fd79a8}
+.hier-box.o{background:#e1700610;border:1px solid #e1700625;color:#fab1a0}
+.hier-box.y{background:#ffeaa710;border:1px solid #ffeaa725;color:#ffeaa7}
+.hier-box.c{background:#55efc410;border:1px solid #55efc425;color:#55efc4}
+.hier-connector{width:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hier-arrow{color:var(--tx3);font-size:.7rem;opacity:.4}
+
+/* FEATURE CARDS */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem}
+.f-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:1.5rem;transition:all .3s}
+.f-card:hover{background:var(--card2);border-color:var(--acc3)}
+.f-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:1rem}
+.f-card h4{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:600;margin-bottom:.4rem}
+.f-card p{font-size:.8rem;color:var(--tx3);line-height:1.5}
+
+/* MCP */
+.mcp-flow{display:flex;align-items:center;gap:0;margin:2rem 0;flex-wrap:wrap;justify-content:center}
+.mcp-node{padding:.8rem 1.2rem;background:var(--card);border:1px solid var(--bd);border-radius:10px;font-size:.8rem;text-align:center;transition:all .3s;min-width:120px}
+.mcp-node:hover{border-color:var(--acc);box-shadow:0 0 20px var(--acc2)}
+.mcp-node .icon{font-size:1.3rem;margin-bottom:.3rem}.mcp-node .label{font-weight:600;font-size:.75rem}.mcp-node .sub{font-size:.6rem;color:var(--tx3)}
+.mcp-arrow{font-family:'Space Mono',monospace;color:var(--acc);font-size:1rem;padding:0 .4rem;opacity:.5}
+
+/* PHASES */
+.phases-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.2rem}
+.phase-card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:1.8rem;transition:all .35s;position:relative;overflow:hidden}
+.phase-card:hover{border-color:var(--acc3);transform:translateY(-3px)}
+.phase-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--acc),var(--p));transform:scaleX(0);transform-origin:left;transition:transform .4s}
+.phase-card:hover::before{transform:scaleX(1)}
+.phase-num{font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;color:var(--acc2);line-height:1;margin-bottom:.3rem}
+.phase-card h3{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:.2rem}
+.phase-timeline{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--acc);letter-spacing:1px;margin-bottom:.8rem}
+.phase-tasks{list-style:none;display:flex;flex-direction:column;gap:.45rem}
+.phase-tasks li{display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--tx2);line-height:1.5}
+.phase-tasks li::before{content:'▸';color:var(--acc);font-size:.65rem;margin-top:4px;flex-shrink:0}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.2rem;margin:2.5rem 0}
+.metric{text-align:center;padding:1.5rem;background:var(--card);border:1px solid var(--bd);border-radius:12px}
+.metric-num{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.metric-label{font-size:.75rem;color:var(--tx3);margin-top:.2rem}
+
+/* TECH */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin:1.5rem 0}
+.tech-item{display:flex;align-items:center;gap:10px;padding:.8rem 1rem;background:var(--card);border:1px solid var(--bd);border-radius:8px;transition:all .3s;font-size:.8rem;font-weight:500}
+.tech-item:hover{border-color:var(--acc3);transform:translateY(-2px)}
+.tech-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* FOOTER */
+.footer{position:relative;z-index:1;text-align:center;padding:3rem 2rem;border-top:1px solid var(--bd)}
+.footer p{color:var(--tx3);font-size:.75rem}
+.cta-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,var(--acc),var(--p));color:var(--bg);font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;border:none;border-radius:10px;cursor:pointer;margin-bottom:1rem;transition:all .3s;text-decoration:none}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 10px 40px var(--acc3)}
+
+@media(max-width:768px){.nav-dots{display:none}.hier-row{flex-direction:column}.hier-label{width:auto;text-align:left;justify-content:flex-start;padding:0 0 .3rem 0}.cost-h-label{width:90px;font-size:.7rem}.mcp-flow{flex-direction:column}.mcp-arrow{transform:rotate(90deg)}}
+
+.tab-count{background:var(--bg2);padding:1px 6px;border-radius:3px;font-size:.55rem;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="particles" id="particles"></div>
+
+<nav class="nav-dots" id="navDots">
+  <div class="nav-dot active" data-label="Home" data-target="hero"></div>
+  <div class="nav-dot" data-label="Classification" data-target="classification"></div>
+  <div class="nav-dot" data-label="All Databases" data-target="all-dbs"></div>
+  <div class="nav-dot" data-label="Cost Analysis" data-target="cost"></div>
+  <div class="nav-dot" data-label="Architecture" data-target="arch"></div>
+  <div class="nav-dot" data-label="Features" data-target="features"></div>
+  <div class="nav-dot" data-label="MCP" data-target="mcp"></div>
+  <div class="nav-dot" data-label="Phases" data-target="phases"></div>
+  <div class="nav-dot" data-label="Stack" data-target="tech"></div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-badge"><span class="dot"></span> Open Source · 28 Databases · MCP Native</div>
+  <h1>Data<span class="hl">Forge</span></h1>
+  <p class="hero-sub">Design data models, plan sharding & caching, and forecast infrastructure costs across 28 databases — from PostgreSQL to Pinecone. All exposed as an MCP server for AI-native workflows.</p>
+  <div class="hero-tags">
+    <span class="hero-tag">SQL</span><span class="hero-tag">NoSQL</span><span class="hero-tag">Graph</span><span class="hero-tag">Vector</span><span class="hero-tag">In-Memory</span><span class="hero-tag">Time-Series</span><span class="hero-tag">Search</span><span class="hero-tag">Sharding</span><span class="hero-tag">Caching</span><span class="hero-tag">MCP Server</span>
+  </div>
+  <div class="scroll-hint"><span>Explore</span><div class="line"></div></div>
+</section>
+
+<!-- CLASSIFICATION -->
+<section class="section" id="classification">
+  <div class="reveal">
+    <span class="section-label">01 — Database Classification</span>
+    <h2 class="section-title">The full taxonomy</h2>
+    <p class="section-desc">DataForge supports databases across 7 categories. Each has distinct storage engines, pricing models, sharding strategies, and scaling characteristics.</p>
+  </div>
+
+  <!-- HIGH LEVEL: SQL vs NoSQL -->
+  <div class="reveal" style="margin-bottom:2rem">
+    <h3 style="font-family:'Syne',sans-serif;font-size:1.2rem;margin-bottom:1rem">High-Level Split: SQL vs NoSQL</h3>
+    <div class="hierarchy stagger">
+      <div class="hier-row">
+        <div class="hier-label">SQL<br><small style="color:var(--bl)">(Relational)</small></div>
+        <div class="hier-boxes">
+          <div class="hier-box b">PostgreSQL<small>OSS</small></div>
+          <div class="hier-box b">MySQL<small>OSS</small></div>
+          <div class="hier-box b">MariaDB<small>OSS</small></div>
+          <div class="hier-box b">SQL Server<small>Microsoft</small></div>
+          <div class="hier-box b">Oracle DB<small>Enterprise</small></div>
+          <div class="hier-box b">CockroachDB<small>Distributed</small></div>
+          <div class="hier-box b">SQLite<small>Embedded</small></div>
+        </div>
+      </div>
+      <div class="hier-row" style="margin-top:8px">
+        <div class="hier-label">NoSQL<br><small style="color:var(--acc)">(Non-Relational)</small></div>
+        <div class="hier-boxes">
+          <div class="hier-box g">MongoDB<small>Document</small></div>
+          <div class="hier-box g">DynamoDB<small>Key-Value</small></div>
+          <div class="hier-box g">Cassandra<small>Wide-Column</small></div>
+          <div class="hier-box g">CouchDB<small>Document</small></div>
+          <div class="hier-box o">Redis<small>In-Memory</small></div>
+          <div class="hier-box o">Valkey<small>In-Memory</small></div>
+          <div class="hier-box v">Neo4j<small>Graph</small></div>
+          <div class="hier-box r">Pinecone<small>Vector</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAILED CLASSIFICATION -->
+  <div class="reveal" style="margin-top:2rem">
+    <h3 style="font-family:'Syne',sans-serif;font-size:1.2rem;margin-bottom:1rem">Detailed by Storage Type</h3>
+  </div>
+  <div class="db-class-grid reveal stagger">
+
+    <!-- DISK-BASED RELATIONAL -->
+    <div class="db-class-card sql">
+      <div class="db-class-header">
+        <div class="db-class-icon sql">🗄️</div>
+        <h3>Disk-Based SQL</h3>
+        <span class="db-class-tag sql-t">SQL</span>
+      </div>
+      <div class="db-class-desc">Traditional relational databases. ACID compliance, schemas, JOINs. Still the backbone of most production systems.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">PostgreSQL</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="85%" style="width:0;background:var(--bl)"></div></div>#4</div></div>
+        <div class="db-entry"><span class="db-entry-name">MySQL</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="92%" style="width:0;background:var(--bl)"></div></div>#2</div></div>
+        <div class="db-entry"><span class="db-entry-name">Oracle DB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="100%" style="width:0;background:var(--bl)"></div></div>#1</div></div>
+        <div class="db-entry"><span class="db-entry-name">SQL Server</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="88%" style="width:0;background:var(--bl)"></div></div>#3</div></div>
+        <div class="db-entry"><span class="db-entry-name">MariaDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="38%" style="width:0;background:var(--bl)"></div></div>#12</div></div>
+        <div class="db-entry"><span class="db-entry-name">CockroachDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="20%" style="width:0;background:var(--bl)"></div></div>#25</div></div>
+        <div class="db-entry"><span class="db-entry-name">SQLite</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="52%" style="width:0;background:var(--bl)"></div></div>#10</div></div>
+      </div>
+    </div>
+
+    <!-- DOCUMENT / KEY-VALUE NOSQL -->
+    <div class="db-class-card nosql">
+      <div class="db-class-header">
+        <div class="db-class-icon nosql">📄</div>
+        <h3>Document & Key-Value</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Schema-less, horizontally scalable. Best for flexible data models, rapid iteration, and distributed systems.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">MongoDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="78%" style="width:0;background:var(--acc)"></div></div>#5</div></div>
+        <div class="db-entry"><span class="db-entry-name">DynamoDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="35%" style="width:0;background:var(--acc)"></div></div>#14</div></div>
+        <div class="db-entry"><span class="db-entry-name">Cassandra</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="32%" style="width:0;background:var(--acc)"></div></div>#15</div></div>
+        <div class="db-entry"><span class="db-entry-name">CouchDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="18%" style="width:0;background:var(--acc)"></div></div>#28</div></div>
+        <div class="db-entry"><span class="db-entry-name">Firebase / Firestore</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="30%" style="width:0;background:var(--acc)"></div></div>#16</div></div>
+      </div>
+    </div>
+
+    <!-- IN-MEMORY -->
+    <div class="db-class-card mem">
+      <div class="db-class-header">
+        <div class="db-class-icon mem">⚡</div>
+        <h3>In-Memory / Cache</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Sub-millisecond latency. Used for caching, sessions, real-time leaderboards, and pub/sub messaging.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">Redis</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="65%" style="width:0;background:var(--or)"></div></div>#7</div></div>
+        <div class="db-entry"><span class="db-entry-name">Valkey</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="28%" style="width:0;background:var(--or)"></div></div>Rising</div></div>
+        <div class="db-entry"><span class="db-entry-name">Memcached</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="22%" style="width:0;background:var(--or)"></div></div>#18</div></div>
+        <div class="db-entry"><span class="db-entry-name">Dragonfly</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="12%" style="width:0;background:var(--or)"></div></div>New</div></div>
+      </div>
+    </div>
+
+    <!-- GRAPH -->
+    <div class="db-class-card graph">
+      <div class="db-class-header">
+        <div class="db-class-icon graph">🕸️</div>
+        <h3>Graph Databases</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Relationship-first storage. Index-free adjacency for lightning traversals. Ideal for knowledge graphs, fraud detection, recommendations.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">Neo4j</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="42%" style="width:0;background:#a29bfe"></div></div>#11</div></div>
+        <div class="db-entry"><span class="db-entry-name">Amazon Neptune</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="18%" style="width:0;background:#a29bfe"></div></div>#22</div></div>
+        <div class="db-entry"><span class="db-entry-name">ArangoDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="15%" style="width:0;background:#a29bfe"></div></div>#26</div></div>
+        <div class="db-entry"><span class="db-entry-name">Dgraph</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="10%" style="width:0;background:#a29bfe"></div></div>#30</div></div>
+      </div>
+    </div>
+
+    <!-- VECTOR -->
+    <div class="db-class-card vector">
+      <div class="db-class-header">
+        <div class="db-class-icon vector">🧬</div>
+        <h3>Vector Databases</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Purpose-built for AI/ML embeddings. HNSW/IVF indexes for similarity search. Critical for RAG, semantic search, recommendations.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">Pinecone</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="35%" style="width:0;background:var(--pk)"></div></div>Leader</div></div>
+        <div class="db-entry"><span class="db-entry-name">Weaviate</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="28%" style="width:0;background:var(--pk)"></div></div>Rising</div></div>
+        <div class="db-entry"><span class="db-entry-name">Milvus / Zilliz</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="30%" style="width:0;background:var(--pk)"></div></div>40K★</div></div>
+        <div class="db-entry"><span class="db-entry-name">Qdrant</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="25%" style="width:0;background:var(--pk)"></div></div>Rising</div></div>
+        <div class="db-entry"><span class="db-entry-name">ChromaDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="18%" style="width:0;background:var(--pk)"></div></div>Dev</div></div>
+        <div class="db-entry"><span class="db-entry-name">pgvector</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="22%" style="width:0;background:var(--pk)"></div></div>Ext</div></div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="db-class-card search">
+      <div class="db-class-header">
+        <div class="db-class-icon search">🔍</div>
+        <h3>Search Engines</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Full-text search, log analytics, and observability. Inverted index architecture for sub-second queries across billions of documents.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">Elasticsearch</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="58%" style="width:0;background:var(--yl)"></div></div>#9</div></div>
+        <div class="db-entry"><span class="db-entry-name">OpenSearch</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="25%" style="width:0;background:var(--yl)"></div></div>#20</div></div>
+      </div>
+    </div>
+
+    <!-- TIME-SERIES -->
+    <div class="db-class-card ts">
+      <div class="db-class-header">
+        <div class="db-class-icon ts">📈</div>
+        <h3>Time-Series</h3>
+        <span class="db-class-tag nosql-t">NOSQL</span>
+      </div>
+      <div class="db-class-desc">Optimized for append-heavy, time-stamped data. IoT telemetry, metrics, financial ticks, monitoring.</div>
+      <div class="db-list">
+        <div class="db-entry"><span class="db-entry-name">InfluxDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="30%" style="width:0;background:var(--cy)"></div></div>#13</div></div>
+        <div class="db-entry"><span class="db-entry-name">TimescaleDB</span><div class="db-entry-pop"><div class="pop-bar"><div class="pop-fill" data-w="18%" style="width:0;background:var(--cy)"></div></div>#21</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ALL DATABASES MASTER TABLE -->
+<section class="section" id="all-dbs">
+  <div class="reveal">
+    <span class="section-label">02 — Comprehensive Database Matrix</span>
+    <h2 class="section-title">28 databases at a glance</h2>
+    <p class="section-desc">Every database DataForge supports — with category, storage type, managed service, pricing model, and sharding approach.</p>
+  </div>
+
+  <div class="master-table-wrap reveal">
+    <table class="master-table">
+      <thead><tr><th>Database</th><th>Category</th><th>Storage</th><th>Managed Service</th><th>Pricing Model</th><th>Sharding</th><th>Typical Cost @100K users</th></tr></thead>
+      <tbody>
+        <tr><td class="db-name">PostgreSQL</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>RDS / Aurora / Supabase</td><td>Instance hrs + storage + IOPS</td><td>Citus extension / partitioning</td><td>$180–$350/mo</td></tr>
+        <tr><td class="db-name">MySQL</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>RDS / PlanetScale / Azure</td><td>Instance hrs + storage</td><td>Vitess / ProxySQL</td><td>$150–$300/mo</td></tr>
+        <tr><td class="db-name">Oracle DB</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>OCI Autonomous DB</td><td>OCPU hrs + storage + license</td><td>Oracle Sharding (native)</td><td>$500–$2000+/mo</td></tr>
+        <tr><td class="db-name">SQL Server</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>Azure SQL / RDS</td><td>vCore/DTU + storage</td><td>Elastic pools / Federation</td><td>$250–$800/mo</td></tr>
+        <tr><td class="db-name">MariaDB</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>SkySQL / RDS</td><td>Instance hrs + storage</td><td>Spider engine / MaxScale</td><td>$120–$280/mo</td></tr>
+        <tr><td class="db-name">CockroachDB</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>CockroachCloud</td><td>Request Units + storage</td><td>Automatic range-based</td><td>$200–$500/mo</td></tr>
+        <tr><td class="db-name">SQLite</td><td><span class="tag tag-sql">SQL</span></td><td><span class="tag tag-disk">DISK</span></td><td>Turso (LibSQL)</td><td>Free / rows read+written</td><td>None (single-file)</td><td>$0–$30/mo</td></tr>
+        <tr><td colspan="7" style="background:var(--bg2);padding:.3rem;border:none"></td></tr>
+        <tr><td class="db-name">MongoDB</td><td><span class="tag tag-nosql">DOCUMENT</span></td><td><span class="tag tag-disk">DISK</span></td><td>Atlas</td><td>Cluster tier + storage + IOPS</td><td>Hash / Range shard keys</td><td>$250–$450/mo</td></tr>
+        <tr><td class="db-name">DynamoDB</td><td><span class="tag tag-nosql">KEY-VALUE</span></td><td><span class="tag tag-disk">DISK</span></td><td>AWS (native)</td><td>RCU/WCU or on-demand</td><td>Partition key (automatic)</td><td>$100–$400/mo</td></tr>
+        <tr><td class="db-name">Cassandra</td><td><span class="tag tag-nosql">WIDE-COL</span></td><td><span class="tag tag-disk">DISK</span></td><td>DataStax Astra</td><td>RU + storage</td><td>Partition key + vnodes</td><td>$200–$500/mo</td></tr>
+        <tr><td class="db-name">CouchDB</td><td><span class="tag tag-nosql">DOCUMENT</span></td><td><span class="tag tag-disk">DISK</span></td><td>IBM Cloudant</td><td>Throughput + storage</td><td>Cluster sharding</td><td>$80–$250/mo</td></tr>
+        <tr><td class="db-name">Firebase / Firestore</td><td><span class="tag tag-nosql">DOCUMENT</span></td><td><span class="tag tag-disk">DISK</span></td><td>Google (native)</td><td>Doc reads/writes + storage</td><td>Automatic</td><td>$50–$300/mo</td></tr>
+        <tr><td colspan="7" style="background:var(--bg2);padding:.3rem;border:none"></td></tr>
+        <tr><td class="db-name">Redis</td><td><span class="tag tag-mem">IN-MEMORY</span></td><td><span class="tag tag-memory">MEMORY</span></td><td>Redis Cloud / ElastiCache</td><td>Memory GB/hr or serverless</td><td>Redis Cluster (hash slots)</td><td>$70–$250/mo</td></tr>
+        <tr><td class="db-name">Valkey</td><td><span class="tag tag-mem">IN-MEMORY</span></td><td><span class="tag tag-memory">MEMORY</span></td><td>ElastiCache / Memorystore</td><td>Node type + memory</td><td>Cluster mode (hash slots)</td><td>$55–$200/mo</td></tr>
+        <tr><td class="db-name">Memcached</td><td><span class="tag tag-mem">IN-MEMORY</span></td><td><span class="tag tag-memory">MEMORY</span></td><td>ElastiCache / Memorystore</td><td>Node type + memory</td><td>Client-side consistent hash</td><td>$50–$180/mo</td></tr>
+        <tr><td class="db-name">Dragonfly</td><td><span class="tag tag-mem">IN-MEMORY</span></td><td><span class="tag tag-memory">MEMORY</span></td><td>Dragonfly Cloud</td><td>Instance + memory</td><td>Built-in cluster</td><td>$60–$220/mo</td></tr>
+        <tr><td colspan="7" style="background:var(--bg2);padding:.3rem;border:none"></td></tr>
+        <tr><td class="db-name">Neo4j</td><td><span class="tag tag-graph">GRAPH</span></td><td><span class="tag tag-disk">DISK</span></td><td>AuraDB</td><td>GB-hour capacity</td><td>Fabric (enterprise)</td><td>$300–$600/mo</td></tr>
+        <tr><td class="db-name">Amazon Neptune</td><td><span class="tag tag-graph">GRAPH</span></td><td><span class="tag tag-disk">DISK</span></td><td>AWS (native)</td><td>Instance hrs + I/O + storage</td><td>Read replicas</td><td>$350–$700/mo</td></tr>
+        <tr><td class="db-name">ArangoDB</td><td><span class="tag tag-graph">GRAPH</span></td><td><span class="tag tag-disk">DISK</span></td><td>ArangoGraph</td><td>Node size + storage</td><td>SmartGraphs</td><td>$200–$500/mo</td></tr>
+        <tr><td class="db-name">Dgraph</td><td><span class="tag tag-graph">GRAPH</span></td><td><span class="tag tag-disk">DISK</span></td><td>Dgraph Cloud</td><td>Node type + data transfer</td><td>Group-based sharding</td><td>$150–$400/mo</td></tr>
+        <tr><td colspan="7" style="background:var(--bg2);padding:.3rem;border:none"></td></tr>
+        <tr><td class="db-name">Pinecone</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-memory">MEMORY</span></td><td>Pinecone (native)</td><td>Storage + Read/Write Units</td><td>Namespace isolation</td><td>$65–$400/mo</td></tr>
+        <tr><td class="db-name">Weaviate</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-disk">DISK</span></td><td>Weaviate Cloud</td><td>Storage-based (SLA tiers)</td><td>Multi-tenant / Sharding</td><td>$85–$350/mo</td></tr>
+        <tr><td class="db-name">Milvus / Zilliz</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-disk">DISK</span></td><td>Zilliz Cloud</td><td>Compute Units (CU/hr)</td><td>Segment-based auto</td><td>$65–$660/mo</td></tr>
+        <tr><td class="db-name">Qdrant</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-disk">DISK</span></td><td>Qdrant Cloud</td><td>Resource-based tiers</td><td>Collection sharding</td><td>$25–$300/mo</td></tr>
+        <tr><td class="db-name">ChromaDB</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-disk">DISK</span></td><td>Self-hosted</td><td>Free (OSS)</td><td>None (single-node)</td><td>$0 (infra only)</td></tr>
+        <tr><td class="db-name">pgvector</td><td><span class="tag tag-vector">VECTOR</span></td><td><span class="tag tag-disk">DISK</span></td><td>Supabase / RDS</td><td>Same as PostgreSQL</td><td>Same as PostgreSQL</td><td>$180–$350/mo</td></tr>
+        <tr><td colspan="7" style="background:var(--bg2);padding:.3rem;border:none"></td></tr>
+        <tr><td class="db-name">Elasticsearch</td><td><span class="tag tag-search">SEARCH</span></td><td><span class="tag tag-disk">DISK</span></td><td>Elastic Cloud / OpenSearch</td><td>Instance + storage + data</td><td>Index sharding (automatic)</td><td>$200–$500/mo</td></tr>
+        <tr><td class="db-name">InfluxDB</td><td><span class="tag tag-ts">TIME-SERIES</span></td><td><span class="tag tag-disk">DISK</span></td><td>InfluxDB Cloud</td><td>Write/query/storage</td><td>Tag-based partitioning</td><td>$80–$300/mo</td></tr>
+        <tr><td class="db-name">TimescaleDB</td><td><span class="tag tag-ts">TIME-SERIES</span></td><td><span class="tag tag-disk">DISK</span></td><td>Timescale Cloud</td><td>Compute + storage</td><td>Hypertable chunks</td><td>$100–$350/mo</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- COST ANALYSIS -->
+<section class="section" id="cost">
+  <div class="reveal">
+    <span class="section-label">03 — Cost Analysis by Category</span>
+    <h2 class="section-title">What does scale actually cost?</h2>
+    <p class="section-desc">Estimated monthly cost at 100K users, typical SaaS workload (50 records/user, 2KB avg). Ranges reflect managed service tiers.</p>
+  </div>
+
+  <div class="cost-section reveal">
+    <div class="cost-tabs">
+      <div class="cost-tab active" data-panel="sql-panel">SQL Databases<span class="tab-count">7</span></div>
+      <div class="cost-tab" data-panel="nosql-panel">Document/KV<span class="tab-count">5</span></div>
+      <div class="cost-tab" data-panel="mem-panel">In-Memory<span class="tab-count">4</span></div>
+      <div class="cost-tab" data-panel="graph-panel">Graph<span class="tab-count">4</span></div>
+      <div class="cost-tab" data-panel="vector-panel">Vector<span class="tab-count">6</span></div>
+      <div class="cost-tab" data-panel="other-panel">Search & TS<span class="tab-count">4</span></div>
+    </div>
+
+    <div class="cost-panel active" id="sql-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">SQLite / Turso</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="3%" style="width:0">$30</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">MariaDB</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="15%" style="width:0">$280</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">MySQL</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="16%" style="width:0">$300</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">PostgreSQL</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="18%" style="width:0">$350</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">CockroachDB</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="26%" style="width:0">$500</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">SQL Server</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="42%" style="width:0">$800</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Oracle DB</span><div class="cost-h-track"><div class="cost-h-fill sql-c" data-w="100%" style="width:0">$2000+</div></div></div>
+      </div>
+    </div>
+
+    <div class="cost-panel" id="nosql-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">Firebase</span><div class="cost-h-track"><div class="cost-h-fill nosql-c" data-w="30%" style="width:0">$300</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">CouchDB</span><div class="cost-h-track"><div class="cost-h-fill nosql-c" data-w="25%" style="width:0">$250</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">DynamoDB</span><div class="cost-h-track"><div class="cost-h-fill nosql-c" data-w="40%" style="width:0">$400</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">MongoDB Atlas</span><div class="cost-h-track"><div class="cost-h-fill nosql-c" data-w="45%" style="width:0">$450</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Cassandra</span><div class="cost-h-track"><div class="cost-h-fill nosql-c" data-w="50%" style="width:0">$500</div></div></div>
+      </div>
+    </div>
+
+    <div class="cost-panel" id="mem-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">Memcached</span><div class="cost-h-track"><div class="cost-h-fill mem-c" data-w="36%" style="width:0">$180</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Valkey</span><div class="cost-h-track"><div class="cost-h-fill mem-c" data-w="40%" style="width:0">$200</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Dragonfly</span><div class="cost-h-track"><div class="cost-h-fill mem-c" data-w="44%" style="width:0">$220</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Redis Cloud</span><div class="cost-h-track"><div class="cost-h-fill mem-c" data-w="50%" style="width:0">$250</div></div></div>
+      </div>
+    </div>
+
+    <div class="cost-panel" id="graph-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">Dgraph</span><div class="cost-h-track"><div class="cost-h-fill graph-c" data-w="40%" style="width:0">$400</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">ArangoDB</span><div class="cost-h-track"><div class="cost-h-fill graph-c" data-w="50%" style="width:0">$500</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Neo4j Aura</span><div class="cost-h-track"><div class="cost-h-fill graph-c" data-w="60%" style="width:0">$600</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Amazon Neptune</span><div class="cost-h-track"><div class="cost-h-fill graph-c" data-w="70%" style="width:0">$700</div></div></div>
+      </div>
+    </div>
+
+    <div class="cost-panel" id="vector-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">ChromaDB</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="1%" style="width:0">$0</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Qdrant</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="30%" style="width:0">$300</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">pgvector</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="35%" style="width:0">$350</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Weaviate</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="35%" style="width:0">$350</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Pinecone</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="40%" style="width:0">$400</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Milvus / Zilliz</span><div class="cost-h-track"><div class="cost-h-fill vector-c" data-w="66%" style="width:0">$660</div></div></div>
+      </div>
+    </div>
+
+    <div class="cost-panel" id="other-panel">
+      <div class="cost-bars-horizontal stagger">
+        <div class="cost-h-bar"><span class="cost-h-label">InfluxDB</span><div class="cost-h-track"><div class="cost-h-fill ts-c" data-w="30%" style="width:0">$300</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">TimescaleDB</span><div class="cost-h-track"><div class="cost-h-fill ts-c" data-w="35%" style="width:0">$350</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">OpenSearch</span><div class="cost-h-track"><div class="cost-h-fill search-c" data-w="40%" style="width:0">$400</div></div></div>
+        <div class="cost-h-bar"><span class="cost-h-label">Elasticsearch</span><div class="cost-h-track"><div class="cost-h-fill search-c" data-w="50%" style="width:0">$500</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics reveal stagger">
+    <div class="metric"><div class="metric-num">28</div><div class="metric-label">Databases Supported</div></div>
+    <div class="metric"><div class="metric-num">7</div><div class="metric-label">DB Categories</div></div>
+    <div class="metric"><div class="metric-num">$0–$2K+</div><div class="metric-label">Cost Range / 100K Users</div></div>
+    <div class="metric"><div class="metric-num">∞</div><div class="metric-label">Growth Scenarios</div></div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="section" id="arch">
+  <div class="reveal">
+    <span class="section-label">04 — System Architecture</span>
+    <h2 class="section-title">How it connects</h2>
+    <p class="section-desc">From the visual canvas to the cost engine — with adapters for every database category.</p>
+  </div>
+  <div class="reveal" style="margin-top:1.5rem">
+    <div class="hierarchy stagger">
+      <div class="hier-row"><div class="hier-label">UI Layer</div><div class="hier-boxes"><div class="hier-box g">Schema Canvas<small>React Flow</small></div><div class="hier-box g">Cost Dashboard<small>Recharts</small></div><div class="hier-box g">Shard Planner<small>Visual Config</small></div><div class="hier-box g">Cache Designer<small>Redis/Valkey</small></div></div></div>
+      <div class="hier-row"><div class="hier-connector"><span class="hier-arrow">▼</span></div></div>
+      <div class="hier-row"><div class="hier-label">API</div><div class="hier-boxes"><div class="hier-box v">REST + GraphQL<small>Fastify</small></div><div class="hier-box v">MCP Server<small>stdio + SSE</small></div><div class="hier-box v">WebSocket<small>Live Updates</small></div></div></div>
+      <div class="hier-row"><div class="hier-connector"><span class="hier-arrow">▼</span></div></div>
+      <div class="hier-row"><div class="hier-label">Engine</div><div class="hier-boxes"><div class="hier-box r">Model Graph<small>Entities</small></div><div class="hier-box r">Ratio Calc<small>Record Projection</small></div><div class="hier-box r">Cost Engine<small>28 DB Adapters</small></div><div class="hier-box r">Shard Sim<small>Distribution</small></div></div></div>
+      <div class="hier-row"><div class="hier-connector"><span class="hier-arrow">▼</span></div></div>
+      <div class="hier-row"><div class="hier-label">DB Adapters</div><div class="hier-boxes"><div class="hier-box b">SQL<small>7 DBs</small></div><div class="hier-box g">Document/KV<small>5 DBs</small></div><div class="hier-box o">In-Memory<small>4 DBs</small></div><div class="hier-box v">Graph<small>4 DBs</small></div><div class="hier-box r">Vector<small>6 DBs</small></div><div class="hier-box c">Search+TS<small>4 DBs</small></div></div></div>
+      <div class="hier-row"><div class="hier-connector"><span class="hier-arrow">▼</span></div></div>
+      <div class="hier-row"><div class="hier-label">Distribution</div><div class="hier-boxes"><div class="hier-box y">npm<small>npx dataforge</small></div><div class="hier-box y">Docker<small>Self-hosted</small></div><div class="hier-box y">MCP Registry<small>AI Discovery</small></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="reveal">
+    <span class="section-label">05 — Core Features</span>
+    <h2 class="section-title">Everything you can do</h2>
+    <p class="section-desc">Every feature gives you instant cost-awareness as your architecture evolves.</p>
+  </div>
+  <div class="feature-grid reveal stagger">
+    <div class="f-card"><div class="f-icon" style="background:var(--acc2)">⬡</div><h4>Visual Data Modelling</h4><p>Drag-and-drop canvas. Central model (User) with record ratios — "1 user → 50 orders, 200 events". Schema adapts per DB type.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--p2)">⟁</div><h4>28-Database Support</h4><p>SQL, NoSQL, Graph, Vector, In-Memory, Search, Time-Series. Switch DB and see how schema, sharding, and cost change instantly.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--pk2)">◈</div><h4>Sharding Planner</h4><p>Per-DB shard strategies: hash/range keys (Mongo), Citus (PG), vnodes (Cassandra), hash slots (Redis), partitions (DynamoDB).</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--bl2)">◇</div><h4>Cache Layer Designer</h4><p>Redis, Valkey, Memcached, or Dragonfly. Define TTLs, eviction policies, memory budgets. Memory cost projections at scale.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--acc2)">↗</div><h4>Growth Simulator</h4><p>Slide from 1K → 10M users. Watch records, storage, IOPS, and cost update live. Compare multiple DBs side-by-side.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--p2)">$</div><h4>Live Cost Engine</h4><p>Real pricing: Atlas, RDS, AuraDB, Pinecone, ElastiCache, Elastic Cloud and more. Compute + storage + backup + network.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--pk2)">⊞</div><h4>Schema Export</h4><p>Prisma, Mongoose, Cypher, raw DDL, DynamoDB JSON, Elasticsearch mappings. One-click scaffold for your codebase.</p></div>
+    <div class="f-card"><div class="f-icon" style="background:var(--bl2)">⚡</div><h4>MCP Server</h4><p>Run DataForge as an MCP server. Claude, Cursor, or any AI assistant can query models, estimate costs, and suggest optimizations.</p></div>
+  </div>
+</section>
+
+<!-- MCP -->
+<section class="section" id="mcp">
+  <div class="reveal">
+    <span class="section-label">06 — MCP Integration</span>
+    <h2 class="section-title">AI-native by design</h2>
+    <p class="section-desc">Every capability as MCP tools. Run locally, connect via Claude Desktop, and let AI interact with your data models.</p>
+  </div>
+  <div class="mcp-flow reveal stagger">
+    <div class="mcp-node"><div class="icon">🧑‍💻</div><div class="label">Developer</div><div class="sub">npx dataforge</div></div>
+    <div class="mcp-arrow">→</div>
+    <div class="mcp-node"><div class="icon">⬡</div><div class="label">DataForge MCP</div><div class="sub">stdio / SSE</div></div>
+    <div class="mcp-arrow">→</div>
+    <div class="mcp-node"><div class="icon">🤖</div><div class="label">AI Client</div><div class="sub">Claude / Cursor</div></div>
+    <div class="mcp-arrow">→</div>
+    <div class="mcp-node"><div class="icon">📊</div><div class="label">Results</div><div class="sub">Cost / Schema</div></div>
+  </div>
+  <div class="reveal" style="margin-top:2rem">
+    <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;margin-bottom:1rem">Exposed MCP Tools</h3>
+    <div class="feature-grid stagger">
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">create_model</h4><p>Define entities with fields, types, and relationships.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">set_ratio</h4><p>Set record ratios (1 user → N sub-records).</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">estimate_cost</h4><p>Cost breakdown for any DB at any user count.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">compare_dbs</h4><p>Side-by-side cost & capability comparison across all 28 DBs.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">plan_sharding</h4><p>Configure shard keys and simulate distribution.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">configure_cache</h4><p>Set up caching with TTL, eviction, memory budget.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">growth_forecast</h4><p>Cost curve projection with configurable growth rate.</p></div>
+      <div class="f-card"><h4 style="font-family:'Space Mono',monospace;font-size:.75rem;color:var(--acc)">export_schema</h4><p>Export as Prisma, Mongoose, Cypher, DDL, and more.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PHASES -->
+<section class="section" id="phases">
+  <div class="reveal">
+    <span class="section-label">07 — Execution Phases</span>
+    <h2 class="section-title">From zero to launch</h2>
+    <p class="section-desc">Phased approach — ship early, iterate fast. Each phase delivers a usable product.</p>
+  </div>
+  <div class="phases-grid reveal stagger">
+    <div class="phase-card"><div class="phase-num">01</div><h3>Foundation</h3><div class="phase-timeline">Weeks 1–3</div><ul class="phase-tasks"><li>Monorepo setup (Turborepo)</li><li>Core Model Graph Engine — entities, fields, relationships</li><li>Record ratio calculator (central → sub-models)</li><li>React canvas with entity boxes & connections</li><li>DB adapter interface + first 4 adapters (PG, Mongo, Neo4j, Pinecone)</li><li>Project persistence (SQLite/JSON)</li></ul></div>
+    <div class="phase-card"><div class="phase-num">02</div><h3>Cost Engine</h3><div class="phase-timeline">Weeks 4–6</div><ul class="phase-tasks"><li>Cost model abstractions per DB category</li><li>SQL adapters: PG/RDS, MySQL, Oracle, SQL Server, MariaDB, CockroachDB</li><li>NoSQL adapters: MongoDB Atlas, DynamoDB, Cassandra, Firebase</li><li>Cost dashboard with growth slider (1K → 10M)</li><li>Real-time recalculation on model changes</li></ul></div>
+    <div class="phase-card"><div class="phase-num">03</div><h3>All DB Adapters</h3><div class="phase-timeline">Weeks 7–9</div><ul class="phase-tasks"><li>In-Memory: Redis, Valkey, Memcached, Dragonfly pricing</li><li>Graph: Neo4j AuraDB, Neptune, ArangoDB, Dgraph</li><li>Vector: Pinecone, Weaviate, Milvus/Zilliz, Qdrant, pgvector, Chroma</li><li>Search: Elasticsearch, OpenSearch</li><li>Time-Series: InfluxDB, TimescaleDB</li><li>Cross-DB comparison view</li></ul></div>
+    <div class="phase-card"><div class="phase-num">04</div><h3>Sharding & Caching</h3><div class="phase-timeline">Weeks 10–12</div><ul class="phase-tasks"><li>Per-DB shard configuration UI</li><li>Shard distribution simulator & hot-spot detection</li><li>Cache layer planner (Redis/Valkey/Memcached/Dragonfly)</li><li>Cache memory cost projections</li><li>Schema export (Prisma, Mongoose, Cypher, DDL, mappings)</li></ul></div>
+    <div class="phase-card"><div class="phase-num">05</div><h3>MCP Server</h3><div class="phase-timeline">Weeks 13–15</div><ul class="phase-tasks"><li>MCP server with stdio + SSE transports</li><li>8+ tools with JSON Schema definitions</li><li>Test with Claude Desktop & Cursor</li><li>Templates: SaaS, E-commerce, Social, IoT</li><li>UI polish — animations, themes, responsive</li></ul></div>
+    <div class="phase-card"><div class="phase-num">06</div><h3>Open Source Launch</h3><div class="phase-timeline">Week 16</div><ul class="phase-tasks"><li>GitHub repo — README, CONTRIBUTING, MIT License</li><li>npm package (npx dataforge)</li><li>Docker image (docker run dataforge)</li><li>MCP registry submission</li><li>Launch: HN, Product Hunt, Reddit, X</li></ul></div>
+  </div>
+</section>
+
+<!-- TECH -->
+<section class="section" id="tech">
+  <div class="reveal">
+    <span class="section-label">08 — Tech Stack</span>
+    <h2 class="section-title">Built with</h2>
+    <p class="section-desc">Modern, lean stack optimized for local-first performance and easy contribution.</p>
+  </div>
+  <div class="tech-grid reveal stagger">
+    <div class="tech-item"><div class="tech-dot" style="background:#61dafb"></div><span>React 19</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#3178c6"></div><span>TypeScript</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#00e5a0"></div><span>React Flow</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#f7df1e"></div><span>Vite</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#68a063"></div><span>Node.js</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#a29bfe"></div><span>MCP SDK</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#ff6b6b"></div><span>Fastify</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#74b9ff"></div><span>Zustand</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#fd79a8"></div><span>Recharts</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#ffeaa7"></div><span>SQLite</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#55efc4"></div><span>Turborepo</span></div>
+    <div class="tech-item"><div class="tech-dot" style="background:#dfe6e9"></div><span>Docker</span></div>
+  </div>
+  <div class="reveal" style="margin-top:2rem">
+    <div style="background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:1.5rem 2rem;font-family:'Space Mono',monospace;font-size:.72rem;color:var(--tx2);line-height:2">
+      <span style="color:var(--acc)">dataforge/</span><br>
+      ├── <span style="color:var(--p)">packages/</span><br>
+      │&nbsp;&nbsp; ├── <span style="color:var(--or)">core/</span> <span style="color:var(--tx3)"># Model engine, ratio calc</span><br>
+      │&nbsp;&nbsp; ├── <span style="color:var(--bl)">ui/</span> <span style="color:var(--tx3)"># React canvas, dashboard</span><br>
+      │&nbsp;&nbsp; ├── <span style="color:#a29bfe">mcp-server/</span> <span style="color:var(--tx3)"># stdio + SSE</span><br>
+      │&nbsp;&nbsp; ├── <span style="color:var(--cy)">pricing/</span> <span style="color:var(--tx3)"># 28 DB cost adapters</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── sql/ &nbsp;<span style="color:var(--tx3)"># pg, mysql, oracle, sqlserver, maria, cockroach, sqlite</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── nosql/ <span style="color:var(--tx3)"># mongo, dynamo, cassandra, couch, firebase</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── memory/ <span style="color:var(--tx3)"># redis, valkey, memcached, dragonfly</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── graph/ <span style="color:var(--tx3)"># neo4j, neptune, arango, dgraph</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── vector/ <span style="color:var(--tx3)"># pinecone, weaviate, milvus, qdrant, chroma, pgvector</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; └── other/ <span style="color:var(--tx3)"># elasticsearch, opensearch, influx, timescale</span><br>
+      │&nbsp;&nbsp; └── <span style="color:var(--yl)">templates/</span> <span style="color:var(--tx3)"># SaaS, E-commerce, Social, IoT</span><br>
+      ├── <span style="color:var(--tx3)">apps/web/</span> <span style="color:var(--tx3)"># Vite entry</span><br>
+      ├── <span style="color:var(--tx3)">docs/</span> <span style="color:var(--tx3)"># VitePress</span><br>
+      └── <span style="color:var(--tx3)">docker/</span> <span style="color:var(--tx3)"># Dockerfile + compose</span>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <a class="cta-btn" href="#hero">⬡ Let's Build DataForge</a>
+  <p>Open Source · MIT Licensed · 28 Databases · MCP Native</p>
+</footer>
+
+<script>
+// Particles
+(()=>{const c=document.getElementById('particles'),cols=['#00e5a0','#7c6cf0','#fd79a8','#4facfe','#fab1a0','#55efc4'];for(let i=0;i<20;i++){const p=document.createElement('div');p.className='particle';const s=Math.random()*3+2;p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${Math.random()*15+10}s;animation-delay:${Math.random()*10}s`;c.appendChild(p)}})();
+
+// Reveal
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')})},{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// Pop bars
+const popObs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.pop-fill').forEach(b=>{b.style.width=b.dataset.w})}})},{threshold:.2});
+document.querySelectorAll('.db-class-card,.master-table-wrap').forEach(el=>popObs.observe(el));
+
+// Cost tabs
+document.querySelectorAll('.cost-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.cost-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.cost-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel=document.getElementById(tab.dataset.panel);
+    panel.classList.add('active');
+    // Animate bars
+    setTimeout(()=>{
+      panel.querySelectorAll('.cost-h-fill').forEach(b=>{b.style.width='0'});
+      setTimeout(()=>{panel.querySelectorAll('.cost-h-fill').forEach(b=>{b.style.width=b.dataset.w})},50);
+      if(!panel.querySelector('.stagger').classList.contains('visible')){panel.querySelector('.stagger').classList.add('visible')}
+    },10);
+  });
+});
+
+// Initial cost bar animation
+const costObs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.cost-panel.active .cost-h-fill').forEach(b=>{b.style.width=b.dataset.w});x.target.querySelectorAll('.stagger').forEach(s=>s.classList.add('visible'))}})},{threshold:.2});
+document.querySelectorAll('.cost-section').forEach(el=>costObs.observe(el));
+
+// Nav dots
+const sections=['hero','classification','all-dbs','cost','arch','features','mcp','phases','tech'];
+const dots=document.querySelectorAll('.nav-dot');
+dots.forEach((d,i)=>{d.addEventListener('click',()=>{document.getElementById(sections[i])?.scrollIntoView({behavior:'smooth'})})});
+window.addEventListener('scroll',()=>{let cur=0;sections.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<window.innerHeight/2)cur=i});dots.forEach((d,i)=>d.classList.toggle('active',i===cur))});
+</script>
+</body>
+</html>
