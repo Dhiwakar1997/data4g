@@ -1,17 +1,26 @@
+**Backend requirments:**
 
-create the UI for the @FRONTEND_PLAN.md  as per the API end points available in the @BACKEND_PLAN.md  understand the base archticture and purpose of the app from @BASE_PLAN.md . You are a senior flutter developer planning to build website for browser for this use case, in future this may be expanded to android tables and ios too. start buildng and setup a env file to configure the endpoint for local and the cloud
+Intension of this application is to visualize the backend achitecture and analyize and identify failure points, understand the archtechture, simulate the high traffic senarios exprement various topology.
+
+Every project may have many topologies
+
+Every topology may have multiple Components
+
+Components type:
+servers(standalone server, VM from kuberneties)
+nodes(kuberneties)
+queues
+Database
+cache
+CDN
+etc (suggest me other components that can be in the backend setup)
+
+Servers component has infra configration and API level configration, all the endpoints in the codebase will be feed into the server component when server is clicked and opened it will give me the list of endpoints . each endpoint has the db and cache calls happening in that endpoint, this details on the database call and cache calls are feed by the mcp server from the developers IDE to our system. this must have the details on the cache tts and help to simulate high traffic senarios. each endpoint will hold the details on what all services it uses and what all data model it intracts with
+
+Database component has the metadata on the data models in the code base which is fetched and uploaded with help of mcp. with this when used clicks on the database he will be taken to a page like models page in power bi where the models are visualized and its connections are established. this will be a view only page where the current datamodel of the system is visualized and details on each field is provided. the models are connected with ratios like user:post 1:200. with this data the cost that will be happening to the database storage cost can be simulated.
+
+Cache component should have the details on what all type of cache keys are there and where it is used in which endpoints with its tts and other details
+
+queue component will have the details on which endpoint uses as producers and which consumer listens to it. and it should have the detail on the partition and queuing strategy.
 
 
-
-Brand colors #FFDE42, #4C5C2D, #313E17, #1B0C0C
-
-The app should be based on the the @DataForge-Full-DB-Analysis.html based style.
-
-The user will be directed to the landing page where the details about the site is available.
-Once they signup or login they will be taken to the currect project, project is the highlevel and will be selected from a dropdwon in the menu bar
-
-inside the project there can be many topology, All the topologies are editable in the topology user can configure client, servers , storages. The topology page will the a infinite space like grid similulating space the stars and comits are displayed like that in @DataForge-Full-DB-Analysis.html . In topology page user will have options to select the components and connect them using edges.
-
-For each item in the topolygy specs and be configured for DB the model creation and structureing can be configured, inside servers server configrations like ram, core, gpu can be calculated, for archistrators we can configure the load-balancers with rules, kubernetes cluters with config can be configured, the dockers containers and its exposed posts can be configured. there should be options to compare the topologies between one another in same project or another for which user have access to.
-
-Users should be able to be added to a project with 2 access levels owner, member owner have access to all the topologies in the project and member has acess to only the topo the acess explicitly share with him.

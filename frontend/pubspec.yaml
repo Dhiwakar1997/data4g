@@ -1,5 +1,5 @@
 name: dataforge_frontend
-description: "DataForge frontend for topology design, infrastructure specs, and cost planning."
+description: "Data4G frontend for topology design, infrastructure specs, risk analysis, and cost planning."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,6 +40,10 @@ dependencies:
   google_fonts: ^6.2.1
   shared_preferences: ^2.3.5
   uuid: ^4.5.1
+  url_launcher: ^6.2.0
+  share_plus: ^7.0.0
+  screenshot: ^2.1.0
+  pdf: ^3.10.0
 
 dev_dependencies:
   flutter_test:

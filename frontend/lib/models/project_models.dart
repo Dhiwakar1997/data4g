@@ -9,6 +9,10 @@ class ProjectSummary {
     required this.topologyCount,
     required this.createdAt,
     required this.updatedAt,
+    this.gitRepoUrl,
+    this.teamId,
+    this.cloudProvider,
+    this.lastMcpSyncAt,
   });
 
   final String projectId;
@@ -18,6 +22,10 @@ class ProjectSummary {
   final int topologyCount;
   final String createdAt;
   final String updatedAt;
+  final String? gitRepoUrl;
+  final String? teamId;
+  final String? cloudProvider;
+  final String? lastMcpSyncAt;
 
   factory ProjectSummary.fromJson(Map<String, dynamic> json) {
     return ProjectSummary(
@@ -28,6 +36,10 @@ class ProjectSummary {
       topologyCount: json['topology_count'] as int? ?? 0,
       createdAt: json['created_at'] as String? ?? '',
       updatedAt: json['updated_at'] as String? ?? '',
+      gitRepoUrl: json['git_repo_url'] as String?,
+      teamId: json['team_id'] as String?,
+      cloudProvider: json['cloud_provider'] as String?,
+      lastMcpSyncAt: json['last_mcp_sync_at'] as String?,
     );
   }
 }

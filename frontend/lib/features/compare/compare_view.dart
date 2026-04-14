@@ -426,6 +426,84 @@ class _CompareViewState extends ConsumerState<CompareView> {
                         style: const TextStyle(color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 16),
+                      // Metric comparisons table
+                      if (comparison.metricComparisons.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Metric Comparisons',
+                          style: AppTheme.syne(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...comparison.metricComparisons.map((mc) {
+                          final isImprovement = mc.isImprovement;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    mc.metricName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${mc.sourceValue.toStringAsFixed(1)} ${mc.unit}',
+                                    textAlign: TextAlign.right,
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Icon(
+                                  isImprovement
+                                      ? Icons.arrow_downward_rounded
+                                      : Icons.arrow_upward_rounded,
+                                  size: 16,
+                                  color: isImprovement
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '${mc.targetValue.toStringAsFixed(1)} ${mc.unit}',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: isImprovement
+                                          ? AppColors.success
+                                          : AppColors.danger,
+                                    ),
+                                  ),
+                                ),
+                                if (mc.deltaPercent != null)
+                                  SizedBox(
+                                    width: 70,
+                                    child: Text(
+                                      '${mc.deltaPercent! >= 0 ? '+' : ''}${mc.deltaPercent!.toStringAsFixed(1)}%',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isImprovement
+                                            ? AppColors.success
+                                            : AppColors.danger,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                      ],
                       ...comparison.componentDiffs.map((diff) {
                         return Container(
                           width: double.infinity,

@@ -31,7 +31,7 @@ class LandingScreen extends StatelessWidget {
                     title:
                         'Start with topology, then drill into component specs',
                     description:
-                        'DataForge mirrors the base plan: first shape the high-level deployment graph, then configure the low-level compute, database, cache, orchestration, and networking details that drive cost.',
+                        'DataForge mirrors the base plan: first shape the high-level deployment graph, then configure the low-level compute, database, cache, orchestration, and networking details that drive cost and risk.',
                     child: Wrap(
                       spacing: 18,
                       runSpacing: 18,
@@ -81,7 +81,7 @@ class LandingScreen extends StatelessWidget {
                           icon: Icons.grid_view_rounded,
                           title: 'Infinite cosmic canvas',
                           description:
-                              'Star-grid topology editing inspired by the existing DataForge HTML visual language.',
+                              'Auto-layout topology canvas with drill-down views into every component.',
                         ),
                         _FeatureCard(
                           icon: Icons.storage_rounded,
@@ -100,6 +100,24 @@ class LandingScreen extends StatelessWidget {
                           title: 'Consolidated dashboard',
                           description:
                               'Component costs, category mix, growth curves, and optimization hints for each project.',
+                        ),
+                        _FeatureCard(
+                          icon: Icons.shield_rounded,
+                          title: 'Risk analysis',
+                          description:
+                              'Automated security and reliability scanning with severity scores per endpoint and component.',
+                        ),
+                        _FeatureCard(
+                          icon: Icons.speed_rounded,
+                          title: 'Traffic simulation',
+                          description:
+                              'Model QPS load across entry points and identify bottlenecks before they hit production.',
+                        ),
+                        _FeatureCard(
+                          icon: Icons.sync_rounded,
+                          title: 'MCP integration',
+                          description:
+                              'Sync topology and specs from your live infrastructure via MCP endpoints.',
                         ),
                       ],
                     ),
@@ -219,7 +237,7 @@ class LandingScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Topology and cost planning control room',
+                    'Topology, risk, and cost planning control room',
                     style: GoogleFonts.spaceMono(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -299,7 +317,7 @@ class LandingScreen extends StatelessWidget {
           const SizedBox(
             width: 760,
             child: Text(
-              'DataForge helps teams move from a high-level project topology to deep component configuration and cost estimation. Clients, servers, storages, queues, gateways, schemas, Kubernetes clusters, and Docker containers all live inside the same collaborative project workspace.',
+              'DataForge helps teams move from a high-level project topology to deep component configuration, cost estimation, risk analysis, and traffic simulation. Clients, servers, storages, queues, gateways, schemas, Kubernetes clusters, and Docker containers all live inside the same collaborative project workspace.',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 17,
@@ -316,6 +334,9 @@ class LandingScreen extends StatelessWidget {
               _HeroTag(label: 'Compute + GPU sizing'),
               _HeroTag(label: 'DB models + ratios'),
               _HeroTag(label: 'Kubernetes + Docker'),
+              _HeroTag(label: 'Risk analysis'),
+              _HeroTag(label: 'Traffic simulation'),
+              _HeroTag(label: 'MCP sync'),
               _HeroTag(label: 'Dashboard + comparisons'),
               _HeroTag(label: 'Owner/member access'),
             ],

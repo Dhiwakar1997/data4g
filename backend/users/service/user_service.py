@@ -2,6 +2,8 @@ import ulid
 import hashlib
 import smtplib
 import logging
+
+import bcrypt
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 
@@ -360,10 +362,15 @@ class UserService:
         return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     def _hash_password(self, password: str) -> str:
-        return hashlib.sha256(password.encode()).hexdigest()
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     def _verify_password(self, plain: str, hashed: str) -> bool:
-        return hashlib.sha256(plain.encode()).hexdigest() == hashed
+        # Dual-check: try bcrypt first, fall back to legacy SHA256 for migration
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except (ValueError, TypeError):
+            # Legacy SHA256 hash — verify and signal migration needed
+            return hashlib.sha256(plain.encode()).hexdigest() == hashed
 
 
 # ── Google Auth Service ─────────────────────────────────────────

@@ -51,5 +51,20 @@ class Settings:
     # Google OAuth (optional — google auth disabled when not set)
     GOOGLE_WEB_CLIENT_ID: str | None = os.getenv("GOOGLE_WEB_CLIENT_ID")
 
+    # Pricing API (optional — uses defaults when not set)
+    AWS_PRICING_API_KEY: str | None = os.getenv("AWS_PRICING_API_KEY")
+    GCP_BILLING_API_KEY: str | None = os.getenv("GCP_BILLING_API_KEY")
+    AZURE_PRICING_API_KEY: str | None = os.getenv("AZURE_PRICING_API_KEY")
+
+    # Scan ingestion (formerly MCP_SERVER_* — analyzer now lives in the
+    # client-side `data4g-mcp` package; backend just validates inbound writes)
+    SCANNER_ENABLED: bool = os.getenv(
+        "SCANNER_ENABLED",
+        os.getenv("MCP_SERVER_ENABLED", "false"),
+    ).lower() == "true"
+
+    # Pricing sync schedule (cron expression)
+    PRICING_SYNC_CRON: str = os.getenv("PRICING_SYNC_CRON", "0 3 * * *")
+
 
 settings = Settings()

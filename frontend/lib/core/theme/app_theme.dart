@@ -18,6 +18,23 @@ class AppColors {
   static const Color success = Color(0xFF55EFC4);
   static const Color danger = Color(0xFFFF8A7A);
   static const Color info = Color(0xFF4FACFE);
+
+  // Risk severity colors
+  static const Color riskCritical = Color(0xFFFF1744);
+  static const Color riskHigh = Color(0xFFFF9100);
+  static const Color riskMedium = Color(0xFFFFEA00);
+  static const Color riskLow = Color(0xFF2979FF);
+  static const Color riskInfo = Color(0xFF69F0AE);
+
+  // New component type colors
+  static const Color apiGatewayColor = Color(0xFFE040FB);
+  static const Color cronJobColor = Color(0xFF7C4DFF);
+  static const Color thirdPartyColor = Color(0xFF00E5FF);
+  static const Color serviceMeshColor = Color(0xFF76FF03);
+
+  // Topology type badges
+  static const Color liveBadgeColor = Color(0xFF00E676);
+  static const Color experimentalBadgeColor = Color(0xFFFF9100);
 }
 
 class AppTheme {

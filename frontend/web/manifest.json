@@ -1,6 +1,6 @@
 {
-    "name": "dataforge_frontend",
-    "short_name": "dataforge_frontend",
+    "name": "DataForge",
+    "short_name": "DataForge",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

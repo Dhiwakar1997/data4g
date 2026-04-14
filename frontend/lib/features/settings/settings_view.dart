@@ -6,7 +6,9 @@ import '../../core/config/app_environment.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/project_models.dart';
 import '../../models/topology_models.dart';
+import '../auth/auth_controller.dart';
 import '../workspace/workspace_controller.dart';
+import 'scan_integration_card.dart';
 
 class SettingsView extends ConsumerStatefulWidget {
   const SettingsView({super.key, required this.state});
@@ -75,9 +77,21 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 1180;
+        final currentUserId = ref.watch(authControllerProvider).userId;
+        final isOwner = project.ownerId == currentUserId;
         final left = Column(
           children: [
             _ProjectOverviewCard(state: widget.state),
+            const SizedBox(height: 18),
+            _GitAndMcpCard(state: widget.state),
+            const SizedBox(height: 18),
+            ScanIntegrationCard(
+              projectId: project.projectId,
+              isOwner: isOwner,
+              usingDemoData: widget.state.usingDemoData,
+            ),
+            const SizedBox(height: 18),
+            _TeamManagementCard(state: widget.state),
             const SizedBox(height: 18),
             const _AccessModelCard(),
             const SizedBox(height: 18),
@@ -234,6 +248,98 @@ class _ProjectOverviewCard extends StatelessWidget {
             icon: Icons.route_rounded,
             text:
                 'Project selection stays in the workspace header so users can jump between high-level initiatives without leaving the browser shell.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GitAndMcpCard extends StatelessWidget {
+  const _GitAndMcpCard({required this.state});
+  final WorkspaceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final project = state.selectedProject!;
+    return _SettingsCard(
+      title: 'Git & MCP Integration',
+      subtitle:
+          'Connect your repository and MCP server for automated topology syncing.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SettingsRow(
+            label: 'Git Repository',
+            value: project.gitRepoUrl ?? 'Not configured',
+          ),
+          _SettingsRow(
+            label: 'Cloud Provider',
+            value: project.cloudProvider ?? 'Not set',
+          ),
+          _SettingsRow(
+            label: 'Team ID',
+            value: project.teamId ?? 'None',
+          ),
+          _SettingsRow(
+            label: 'Last MCP Sync',
+            value: project.lastMcpSyncAt ?? 'Never',
+          ),
+          const SizedBox(height: 12),
+          const _InlineNote(
+            icon: Icons.sync_rounded,
+            text:
+                'MCP sync imports endpoint registries, risk analysis, and topology updates from your connected code analysis server.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamManagementCard extends StatelessWidget {
+  const _TeamManagementCard({required this.state});
+  final WorkspaceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsCard(
+      title: 'Team',
+      subtitle: 'Manage your team and invite collaborators.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed('/teams'),
+            icon: const Icon(Icons.group_outlined),
+            label: const Text('Manage Teams'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.textMuted),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
           ),
         ],
       ),

@@ -55,3 +55,32 @@ String titleCase(String value) {
 double clampDouble(double value, double min, double max) {
   return math.max(min, math.min(max, value));
 }
+
+String riskScoreLabel(double score) {
+  if (score >= 8) return 'Critical';
+  if (score >= 6) return 'High';
+  if (score >= 4) return 'Medium';
+  if (score >= 2) return 'Low';
+  return 'Info';
+}
+
+String formatRiskScore(double score) {
+  return '${score.toStringAsFixed(1)} / 10';
+}
+
+String latencyLabel(double ms) {
+  if (ms >= 1000) {
+    return '${(ms / 1000).toStringAsFixed(1)}s';
+  }
+  return '${ms.toStringAsFixed(0)}ms';
+}
+
+String rpsLabel(double rps) {
+  if (rps >= 1000000) {
+    return '${(rps / 1000000).toStringAsFixed(1)}M req/s';
+  }
+  if (rps >= 1000) {
+    return '${(rps / 1000).toStringAsFixed(1)}K req/s';
+  }
+  return '${rps.toStringAsFixed(0)} req/s';
+}

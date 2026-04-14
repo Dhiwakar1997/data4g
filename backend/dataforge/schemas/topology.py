@@ -1,8 +1,10 @@
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
+from datetime import datetime
+
 from dataforge.schemas.enums import (
-    CloudProvider, ComponentType, DeploymentMode, Region,
+    CloudProvider, ComponentType, DeploymentMode, Region, TopologyType,
 )
 
 
@@ -34,6 +36,7 @@ class TopologyComponent(BaseModel):
 
 class TopologyCreateRequest(BaseModel):
     name: str
+    topology_type: TopologyType = TopologyType.EXPERIMENTAL
     deployment_mode: DeploymentMode = DeploymentMode.MULTI_TIER
     components: list[TopologyComponent] = Field(default_factory=list)
     edges: list[TopologyEdge] = Field(default_factory=list)
@@ -55,6 +58,8 @@ class TopologyUpdateRequest(BaseModel):
 class Topology(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
+    topology_type: TopologyType = TopologyType.EXPERIMENTAL
+    cloned_from: str | None = None
     deployment_mode: DeploymentMode = DeploymentMode.MULTI_TIER
     components: list[TopologyComponent] = Field(default_factory=list)
     edges: list[TopologyEdge] = Field(default_factory=list)
@@ -62,6 +67,8 @@ class Topology(BaseModel):
     growth_targets: list[int] = Field(
         default_factory=lambda: [1_000, 10_000, 100_000, 1_000_000]
     )
+    last_synced_at: datetime | None = None
+    sync_version: int = 0
 
     def get_components_by_type(self, ctype: ComponentType) -> list[TopologyComponent]:
         return [c for c in self.components if c.type == ctype and c.enabled]

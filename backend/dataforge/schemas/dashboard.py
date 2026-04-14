@@ -57,3 +57,4 @@ class ConsolidatedDashboard(BaseModel):
     comparison_total_monthly: float | None = None
     comparison_delta: float | None = None
     optimization_hints: list[OptimizationHint] = []
+    risk_score: float = 0.0

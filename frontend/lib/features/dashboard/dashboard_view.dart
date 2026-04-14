@@ -371,6 +371,83 @@ class DashboardView extends StatelessWidget {
               ),
             ],
           ),
+          // Risk & Traffic summary row
+          if (dashboard.riskScore != null ||
+              dashboard.trafficSummaryRps != null) ...[
+            const SizedBox(height: 18),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (dashboard.riskScore != null)
+                  Expanded(
+                    child: _DashboardCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Risk Score',
+                            style: AppTheme.syne(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${dashboard.riskScore!.toInt()}',
+                            style: AppTheme.syne(
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                              color: dashboard.riskScore! >= 60
+                                  ? AppColors.danger
+                                  : AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${dashboard.riskFindingCount ?? 0} findings detected',
+                            style: const TextStyle(color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (dashboard.riskScore != null &&
+                    dashboard.trafficSummaryRps != null)
+                  const SizedBox(width: 18),
+                if (dashboard.trafficSummaryRps != null)
+                  Expanded(
+                    child: _DashboardCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Traffic',
+                            style: AppTheme.syne(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${dashboard.trafficSummaryRps!.toStringAsFixed(0)} RPS',
+                            style: AppTheme.syne(
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.info,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Simulated entry-point traffic',
+                            style: TextStyle(color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 18),
           _DashboardCard(
             child: Column(

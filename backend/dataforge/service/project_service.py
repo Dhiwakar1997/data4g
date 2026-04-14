@@ -21,6 +21,9 @@ class ProjectService:
             owner_id=owner_id,
             name=req.name,
             description=req.description,
+            git_repo_url=req.git_repo_url,
+            team_id=req.team_id,
+            cloud_provider=req.cloud_provider.value if req.cloud_provider else "aws",
             topologies={},
             topology=None,
             compute_specs={},
@@ -30,6 +33,11 @@ class ProjectService:
             cdn_specs={},
             k8s_specs={},
             docker_specs={},
+            api_gateway_specs={},
+            cron_specs={},
+            object_storage_specs={},
+            service_mesh_specs={},
+            third_party_specs={},
             cost_snapshot=None,
         )
         created = await self.repo.create_project(project)
@@ -64,6 +72,12 @@ class ProjectService:
             project.name = req.name
         if req.description is not None:
             project.description = req.description
+        if req.git_repo_url is not None:
+            project.git_repo_url = req.git_repo_url
+        if req.team_id is not None:
+            project.team_id = req.team_id
+        if req.cloud_provider is not None:
+            project.cloud_provider = req.cloud_provider.value
         updated = await self.repo.update_project(project)
         return self._to_response(updated)
 
@@ -90,6 +104,9 @@ class ProjectService:
             name=project.name,
             description=project.description or "",
             topology_count=len(project.topologies) if project.topologies else 0,
+            git_repo_url=project.git_repo_url,
+            team_id=project.team_id,
+            cloud_provider=project.cloud_provider or "aws",
             created_at=project.created_at.isoformat() if project.created_at else "",
             updated_at=project.updated_at.isoformat() if project.updated_at else "",
         )

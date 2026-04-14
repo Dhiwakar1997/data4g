@@ -146,6 +146,9 @@ class ConsolidatedDashboard {
     this.comparisonDatabase,
     this.comparisonTotalMonthly,
     this.comparisonDelta,
+    this.riskScore,
+    this.riskFindingCount,
+    this.trafficSummaryRps,
   });
 
   final String projectId;
@@ -161,6 +164,9 @@ class ConsolidatedDashboard {
   final String? comparisonDatabase;
   final double? comparisonTotalMonthly;
   final double? comparisonDelta;
+  final double? riskScore;
+  final int? riskFindingCount;
+  final double? trafficSummaryRps;
 
   factory ConsolidatedDashboard.fromJson(Map<String, dynamic> json) {
     return ConsolidatedDashboard(
@@ -200,6 +206,9 @@ class ConsolidatedDashboard {
       comparisonTotalMonthly: (json['comparison_total_monthly'] as num?)
           ?.toDouble(),
       comparisonDelta: (json['comparison_delta'] as num?)?.toDouble(),
+      riskScore: (json['risk_score'] as num?)?.toDouble(),
+      riskFindingCount: json['risk_finding_count'] as int?,
+      trafficSummaryRps: (json['traffic_summary_rps'] as num?)?.toDouble(),
     );
   }
 
@@ -207,6 +216,9 @@ class ConsolidatedDashboard {
     String? comparisonDatabase,
     double? comparisonTotalMonthly,
     double? comparisonDelta,
+    double? riskScore,
+    int? riskFindingCount,
+    double? trafficSummaryRps,
   }) {
     return ConsolidatedDashboard(
       projectId: projectId,
@@ -223,6 +235,9 @@ class ConsolidatedDashboard {
       comparisonTotalMonthly:
           comparisonTotalMonthly ?? this.comparisonTotalMonthly,
       comparisonDelta: comparisonDelta ?? this.comparisonDelta,
+      riskScore: riskScore ?? this.riskScore,
+      riskFindingCount: riskFindingCount ?? this.riskFindingCount,
+      trafficSummaryRps: trafficSummaryRps ?? this.trafficSummaryRps,
     );
   }
 }

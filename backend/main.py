@@ -18,6 +18,13 @@ from dataforge.route.cost_route import cost_router
 from dataforge.route.reference_route import reference_router
 from dataforge.route.membership_route import membership_router
 from dataforge.route.comparison_route import comparison_router
+from dataforge.route.risk_route import risk_router
+from dataforge.route.scan_route import scan_router
+from dataforge.route.api_key_route import api_key_router
+from dataforge.route.export_route import export_router
+from dataforge.route.share_route import share_router
+
+from teams.route.team_route import team_router
 
 
 # ── Lifespan (Motor + Beanie init / shutdown) ───────────────────
@@ -69,3 +76,11 @@ app.include_router(cost_router, prefix="/api/v1", tags=["cost"])
 app.include_router(reference_router, prefix="/api/v1", tags=["reference"])
 app.include_router(membership_router, prefix="/api/v1", tags=["membership"])
 app.include_router(comparison_router, prefix="/api/v1", tags=["comparison"])
+
+# New routers
+app.include_router(team_router, prefix="/api/v1", tags=["teams"])
+app.include_router(risk_router, prefix="/api/v1", tags=["risk"])
+app.include_router(scan_router, prefix="/api/v1", tags=["scan"])
+app.include_router(api_key_router, prefix="/api/v1", tags=["api-keys"])
+app.include_router(export_router, prefix="/api/v1", tags=["export"])
+app.include_router(share_router, prefix="/api/v1", tags=["share"])

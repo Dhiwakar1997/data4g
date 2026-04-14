@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "data4g"
+version = "0.1.0"
+description = "Data4G local MCP server + CLI. Lets your AI coding agent sync a repo's topology, endpoints, and risks to Data4G."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "Data4G" }]
+keywords = ["mcp", "data4g", "topology", "ai-agent", "static-analysis"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "rich>=13.7",
+    "tomli-w>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+data4g = "data4g.cli.main:app"
+data4g-mcp = "data4g.mcp.server:main"
+
+[project.urls]
+Homepage = "https://data4g.io"
+Documentation = "https://data4g.io/docs"
+Issues = "https://github.com/data4g/data4g/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["data4g"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/data4g",
+    "/README.md",
+    "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+ignore = ["E501"]

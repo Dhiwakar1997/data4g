@@ -14,6 +14,9 @@ from dataforge.schemas.dashboard import (
     ComponentCostSummary, CategoryCostSummary, GrowthProjection,
     EntityCostDetail, OptimizationHint, ConsolidatedDashboard,
 )
+from dataforge.schemas.api_gateway_spec import APIGatewaySpec, APIGatewayCostBreakdown
+from dataforge.schemas.object_storage_spec import ObjectStorageSpec, ObjectStorageCostBreakdown
+from dataforge.schemas.third_party_spec import ThirdPartyAPISpec
 from dataforge.schemas.enums import ComponentType, DatabaseId
 from dataforge.service.model_graph import ModelGraph
 
@@ -46,6 +49,13 @@ LB_FIXED_MONTHLY = 22.0
 LB_LCU_PRICE_HOUR = 0.008
 CDN_PRICE_PER_GB = 0.085
 CDN_PRICE_PER_10K_REQUESTS = 0.0075
+
+API_GATEWAY_PRICE_PER_MILLION_REQUESTS = 3.50
+API_GATEWAY_DATA_TRANSFER_PER_GB = 0.09
+
+OBJECT_STORAGE_PRICE_PER_GB = 0.023
+OBJECT_STORAGE_REQUEST_PRICE_PER_1000 = 0.005
+OBJECT_STORAGE_EGRESS_PER_GB = 0.09
 
 HOURS_PER_MONTH = 730.0
 
@@ -141,6 +151,55 @@ class CostEngine:
                     "fixed": breakdown.fixed_cost_monthly,
                     "lcu": breakdown.lcu_cost_monthly,
                     "data_processing": breakdown.data_processing_cost_monthly,
+                },
+            ))
+
+        # API Gateway costs
+        for cid, spec_data in (project.api_gateway_specs or {}).items():
+            spec = APIGatewaySpec.model_validate(spec_data)
+            breakdown = self._calc_api_gateway_cost(spec)
+            component_costs.append(ComponentCostSummary(
+                topology_component_id=cid,
+                component_name=self._component_name(topology, cid),
+                component_type=ComponentType.API_GATEWAY,
+                total_monthly=breakdown.total_monthly,
+                details={
+                    "requests": breakdown.request_cost_monthly,
+                    "data_transfer": breakdown.data_transfer_cost_monthly,
+                },
+            ))
+
+        # Object Storage costs
+        for cid, spec_data in (project.object_storage_specs or {}).items():
+            spec = ObjectStorageSpec.model_validate(spec_data)
+            breakdown = self._calc_object_storage_cost(spec)
+            component_costs.append(ComponentCostSummary(
+                topology_component_id=cid,
+                component_name=self._component_name(topology, cid),
+                component_type=ComponentType.OBJECT_STORE,
+                total_monthly=breakdown.total_monthly,
+                details={
+                    "storage": breakdown.storage_cost_monthly,
+                    "requests": breakdown.request_cost_monthly,
+                    "egress": breakdown.egress_cost_monthly,
+                },
+            ))
+
+        # Third-party API costs
+        for cid, spec_data in (project.third_party_specs or {}).items():
+            spec = ThirdPartyAPISpec.model_validate(spec_data)
+            monthly_cost = (
+                spec.monthly_subscription_cost
+                + spec.cost_per_call * spec.estimated_calls_per_month
+            )
+            component_costs.append(ComponentCostSummary(
+                topology_component_id=cid,
+                component_name=self._component_name(topology, cid),
+                component_type=ComponentType.THIRD_PARTY_API,
+                total_monthly=round(monthly_cost, 2),
+                details={
+                    "subscription": spec.monthly_subscription_cost,
+                    "per_call": round(spec.cost_per_call * spec.estimated_calls_per_month, 2),
                 },
             ))
 
@@ -361,6 +420,33 @@ class CostEngine:
             data_transfer_cost_monthly=round(transfer_cost, 2),
             request_cost_monthly=round(request_cost, 2),
             ssl_cost_monthly=ssl_cost,
+            total_monthly=total,
+        )
+
+    def _calc_api_gateway_cost(self, spec: APIGatewaySpec) -> APIGatewayCostBreakdown:
+        monthly_requests = spec.estimated_requests_per_second * 3600 * 24 * 30
+        request_cost = (monthly_requests / 1_000_000) * API_GATEWAY_PRICE_PER_MILLION_REQUESTS
+        # Estimate ~1KB per request for data transfer
+        data_gb = monthly_requests * 0.001 / (1024 ** 2)
+        data_cost = data_gb * API_GATEWAY_DATA_TRANSFER_PER_GB
+        total = round(request_cost + data_cost, 2)
+        return APIGatewayCostBreakdown(
+            topology_component_id=spec.topology_component_id,
+            request_cost_monthly=round(request_cost, 2),
+            data_transfer_cost_monthly=round(data_cost, 2),
+            total_monthly=total,
+        )
+
+    def _calc_object_storage_cost(self, spec: ObjectStorageSpec) -> ObjectStorageCostBreakdown:
+        storage_cost = spec.estimated_storage_gb * OBJECT_STORAGE_PRICE_PER_GB
+        request_cost = (spec.estimated_requests_per_month / 1000) * OBJECT_STORAGE_REQUEST_PRICE_PER_1000
+        egress_cost = spec.estimated_egress_gb_month * OBJECT_STORAGE_EGRESS_PER_GB
+        total = round(storage_cost + request_cost + egress_cost, 2)
+        return ObjectStorageCostBreakdown(
+            topology_component_id=spec.topology_component_id,
+            storage_cost_monthly=round(storage_cost, 2),
+            request_cost_monthly=round(request_cost, 2),
+            egress_cost_monthly=round(egress_cost, 2),
             total_monthly=total,
         )
 

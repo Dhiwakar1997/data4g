@@ -259,6 +259,26 @@ class _SpecEditorBody extends StatelessWidget {
                 component: component,
                 state: state,
               ),
+              ComponentType.apiGateway => _ApiGatewaySpecEditor(
+                component: component,
+                state: state,
+              ),
+              ComponentType.cronJob => _CronJobSpecEditor(
+                component: component,
+                state: state,
+              ),
+              ComponentType.objectStore => _ObjectStorageSpecEditor(
+                component: component,
+                state: state,
+              ),
+              ComponentType.serviceMesh => _ServiceMeshSpecEditor(
+                component: component,
+                state: state,
+              ),
+              ComponentType.thirdPartyApi => _ThirdPartyApiSpecEditor(
+                component: component,
+                state: state,
+              ),
               _ => _UnsupportedSpecEditor(component: component),
             },
           ],
@@ -3710,6 +3730,10 @@ IconData _componentIcon(ComponentType type) {
     ComponentType.client => Icons.devices_rounded,
     ComponentType.objectStore => Icons.inventory_2_rounded,
     ComponentType.messageQueue => Icons.alt_route_rounded,
+    ComponentType.apiGateway => Icons.api_rounded,
+    ComponentType.cronJob => Icons.schedule_rounded,
+    ComponentType.serviceMesh => Icons.hub_rounded,
+    ComponentType.thirdPartyApi => Icons.cloud_outlined,
   };
 }
 
@@ -3723,6 +3747,10 @@ Color _componentColor(ComponentType type) {
     ComponentType.client => AppColors.textMuted,
     ComponentType.objectStore => AppColors.brandYellow,
     ComponentType.messageQueue => const Color(0xFFFF8AD8),
+    ComponentType.apiGateway => AppColors.apiGatewayColor,
+    ComponentType.cronJob => AppColors.cronJobColor,
+    ComponentType.serviceMesh => AppColors.serviceMeshColor,
+    ComponentType.thirdPartyApi => AppColors.thirdPartyColor,
   };
 }
 
@@ -3742,6 +3770,881 @@ extension on K8sContainerModel {
       image: image ?? this.image,
       tag: tag ?? this.tag,
       ports: ports ?? this.ports,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API Gateway Spec Editor
+// ---------------------------------------------------------------------------
+
+class _ApiGatewaySpecEditor extends ConsumerStatefulWidget {
+  const _ApiGatewaySpecEditor({required this.component, required this.state});
+  final TopologyComponent component;
+  final WorkspaceState state;
+
+  @override
+  ConsumerState<_ApiGatewaySpecEditor> createState() =>
+      _ApiGatewaySpecEditorState();
+}
+
+class _ApiGatewaySpecEditorState
+    extends ConsumerState<_ApiGatewaySpecEditor> {
+  late APIGatewaySpec _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.state.apiGatewaySpecs[widget.component.id] ??
+        _defaultApiGatewaySpec(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ApiGatewaySpecEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final id = widget.component.id;
+    if (oldWidget.component.id != id ||
+        (oldWidget.state.apiGatewaySpecs[id] == null &&
+            widget.state.apiGatewaySpecs[id] != null)) {
+      _draft = widget.state.apiGatewaySpecs[id] ??
+          _defaultApiGatewaySpec(widget.component);
+    }
+  }
+
+  APIGatewaySpec _defaultApiGatewaySpec(TopologyComponent c) {
+    return APIGatewaySpec(
+      topologyComponentId: c.id,
+      rateLimitEnabled: true,
+      rateLimitRps: 1000,
+      rateLimitBurst: 100,
+      rateLimitWindowSeconds: 60,
+      authType: 'jwt',
+      corsEnabled: true,
+      requestLogging: true,
+      routes: const [],
+      estimatedRps: 500,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ref.read(workspaceControllerProvider.notifier);
+    return _SectionCard(
+      title: 'API Gateway',
+      subtitle:
+          'Configure rate limiting, authentication, CORS, and routing for this gateway.',
+      action: ElevatedButton.icon(
+        onPressed: () => controller.saveApiGatewaySpec(_draft),
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save'),
+      ),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.authType,
+                  decoration: const InputDecoration(labelText: 'Auth type'),
+                  items: _buildStringItems(
+                      const ['jwt', 'api_key', 'oauth2', 'none']),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _draft = _draft.copyWith(authType: v));
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedRps}',
+                  decoration: const InputDecoration(labelText: 'Estimated RPS'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft = _draft.copyWith(estimatedRps: val));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SwitchListTile(
+            title: const Text('Rate limiting'),
+            subtitle: Text('${_draft.rateLimitRps} RPS, burst ${_draft.rateLimitBurst}'),
+            value: _draft.rateLimitEnabled,
+            onChanged: (v) => setState(() => _draft = _draft.copyWith(rateLimitEnabled: v)),
+          ),
+          if (_draft.rateLimitEnabled)
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: 140,
+                  child: TextFormField(
+                    initialValue: '${_draft.rateLimitRps}',
+                    decoration: const InputDecoration(labelText: 'Rate limit RPS'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      final val = int.tryParse(v);
+                      if (val != null) {
+                        setState(() => _draft = _draft.copyWith(rateLimitRps: val));
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: TextFormField(
+                    initialValue: '${_draft.rateLimitBurst}',
+                    decoration: const InputDecoration(labelText: 'Burst'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      final val = int.tryParse(v);
+                      if (val != null) {
+                        setState(() => _draft = _draft.copyWith(rateLimitBurst: val));
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('CORS enabled'),
+            value: _draft.corsEnabled,
+            onChanged: (v) => setState(() => _draft = _draft.copyWith(corsEnabled: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Request logging'),
+            value: _draft.requestLogging,
+            onChanged: (v) => setState(() => _draft = _draft.copyWith(requestLogging: v)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cron Job Spec Editor
+// ---------------------------------------------------------------------------
+
+class _CronJobSpecEditor extends ConsumerStatefulWidget {
+  const _CronJobSpecEditor({required this.component, required this.state});
+  final TopologyComponent component;
+  final WorkspaceState state;
+
+  @override
+  ConsumerState<_CronJobSpecEditor> createState() => _CronJobSpecEditorState();
+}
+
+class _CronJobSpecEditorState extends ConsumerState<_CronJobSpecEditor> {
+  late CronJobSpec _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.state.cronJobSpecs[widget.component.id] ??
+        _defaultCronJobSpec(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CronJobSpecEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final id = widget.component.id;
+    if (oldWidget.component.id != id ||
+        (oldWidget.state.cronJobSpecs[id] == null &&
+            widget.state.cronJobSpecs[id] != null)) {
+      _draft = widget.state.cronJobSpecs[id] ??
+          _defaultCronJobSpec(widget.component);
+    }
+  }
+
+  CronJobSpec _defaultCronJobSpec(TopologyComponent c) {
+    return CronJobSpec(
+      topologyComponentId: c.id,
+      schedule: '0 */6 * * *',
+      command: '',
+      targetServiceId: '',
+      targetEndpoint: '',
+      timeoutSeconds: 300,
+      maxRetries: 3,
+      backoffMultiplier: 2.0,
+      estimatedDurationSeconds: 60,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ref.read(workspaceControllerProvider.notifier);
+    return _SectionCard(
+      title: 'Cron Job',
+      subtitle:
+          'Configure schedule, target service, timeout, and retry policy for this job.',
+      action: ElevatedButton.icon(
+        onPressed: () => controller.saveCronJobSpec(_draft),
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save'),
+      ),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: TextFormField(
+                  initialValue: _draft.schedule,
+                  decoration: const InputDecoration(
+                    labelText: 'Cron schedule',
+                    hintText: '0 */6 * * *',
+                  ),
+                  onChanged: (v) =>
+                      setState(() => _draft = _draft.copyWith(schedule: v)),
+                ),
+              ),
+              SizedBox(
+                width: 300,
+                child: TextFormField(
+                  initialValue: _draft.command,
+                  decoration: const InputDecoration(labelText: 'Command'),
+                  onChanged: (v) =>
+                      setState(() => _draft = _draft.copyWith(command: v)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: TextFormField(
+                  initialValue: _draft.targetServiceId,
+                  decoration:
+                      const InputDecoration(labelText: 'Target service ID'),
+                  onChanged: (v) => setState(
+                      () => _draft = _draft.copyWith(targetServiceId: v)),
+                ),
+              ),
+              SizedBox(
+                width: 200,
+                child: TextFormField(
+                  initialValue: _draft.targetEndpoint,
+                  decoration:
+                      const InputDecoration(labelText: 'Target endpoint'),
+                  onChanged: (v) => setState(
+                      () => _draft = _draft.copyWith(targetEndpoint: v)),
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: TextFormField(
+                  initialValue: '${_draft.timeoutSeconds}',
+                  decoration:
+                      const InputDecoration(labelText: 'Timeout (s)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = int.tryParse(v);
+                    if (val != null) {
+                      setState(
+                          () => _draft = _draft.copyWith(timeoutSeconds: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: TextFormField(
+                  initialValue: '${_draft.maxRetries}',
+                  decoration:
+                      const InputDecoration(labelText: 'Max retries'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = int.tryParse(v);
+                    if (val != null) {
+                      setState(
+                          () => _draft = _draft.copyWith(maxRetries: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedDurationSeconds}',
+                  decoration:
+                      const InputDecoration(labelText: 'Est. duration (s)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = int.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(estimatedDurationSeconds: val));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Object Storage Spec Editor
+// ---------------------------------------------------------------------------
+
+class _ObjectStorageSpecEditor extends ConsumerStatefulWidget {
+  const _ObjectStorageSpecEditor(
+      {required this.component, required this.state});
+  final TopologyComponent component;
+  final WorkspaceState state;
+
+  @override
+  ConsumerState<_ObjectStorageSpecEditor> createState() =>
+      _ObjectStorageSpecEditorState();
+}
+
+class _ObjectStorageSpecEditorState
+    extends ConsumerState<_ObjectStorageSpecEditor> {
+  late ObjectStorageSpec _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.state.objectStorageSpecs[widget.component.id] ??
+        _defaultObjectStorageSpec(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ObjectStorageSpecEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final id = widget.component.id;
+    if (oldWidget.component.id != id ||
+        (oldWidget.state.objectStorageSpecs[id] == null &&
+            widget.state.objectStorageSpecs[id] != null)) {
+      _draft = widget.state.objectStorageSpecs[id] ??
+          _defaultObjectStorageSpec(widget.component);
+    }
+  }
+
+  ObjectStorageSpec _defaultObjectStorageSpec(TopologyComponent c) {
+    return ObjectStorageSpec(
+      topologyComponentId: c.id,
+      provider: 's3',
+      estimatedStorageGb: 100,
+      estimatedRequestsMonth: 1000000,
+      estimatedEgressGbMonth: 50,
+      accessPolicy: 'private',
+      versioningEnabled: false,
+      lifecycleRules: const [],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ref.read(workspaceControllerProvider.notifier);
+    return _SectionCard(
+      title: 'Object Storage',
+      subtitle:
+          'Configure provider, storage estimates, access policy, and lifecycle rules.',
+      action: ElevatedButton.icon(
+        onPressed: () => controller.saveObjectStorageSpec(_draft),
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save'),
+      ),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.provider,
+                  decoration: const InputDecoration(labelText: 'Provider'),
+                  items: _buildStringItems(
+                      const ['s3', 'gcs', 'azure_blob', 'minio']),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() => _draft = _draft.copyWith(provider: v));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.accessPolicy,
+                  decoration:
+                      const InputDecoration(labelText: 'Access policy'),
+                  items: _buildStringItems(
+                      const ['private', 'public_read', 'public_read_write']),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(
+                          () => _draft = _draft.copyWith(accessPolicy: v));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedStorageGb}',
+                  decoration:
+                      const InputDecoration(labelText: 'Storage (GB)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() =>
+                          _draft = _draft.copyWith(estimatedStorageGb: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedRequestsMonth}',
+                  decoration:
+                      const InputDecoration(labelText: 'Requests/month'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(estimatedRequestsMonth: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedEgressGbMonth}',
+                  decoration:
+                      const InputDecoration(labelText: 'Egress GB/month'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(estimatedEgressGbMonth: val));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Versioning'),
+            value: _draft.versioningEnabled,
+            onChanged: (v) =>
+                setState(() => _draft = _draft.copyWith(versioningEnabled: v)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Service Mesh Spec Editor
+// ---------------------------------------------------------------------------
+
+class _ServiceMeshSpecEditor extends ConsumerStatefulWidget {
+  const _ServiceMeshSpecEditor(
+      {required this.component, required this.state});
+  final TopologyComponent component;
+  final WorkspaceState state;
+
+  @override
+  ConsumerState<_ServiceMeshSpecEditor> createState() =>
+      _ServiceMeshSpecEditorState();
+}
+
+class _ServiceMeshSpecEditorState
+    extends ConsumerState<_ServiceMeshSpecEditor> {
+  late ServiceMeshSpec _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.state.serviceMeshSpecs[widget.component.id] ??
+        _defaultServiceMeshSpec(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ServiceMeshSpecEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final id = widget.component.id;
+    if (oldWidget.component.id != id ||
+        (oldWidget.state.serviceMeshSpecs[id] == null &&
+            widget.state.serviceMeshSpecs[id] != null)) {
+      _draft = widget.state.serviceMeshSpecs[id] ??
+          _defaultServiceMeshSpec(widget.component);
+    }
+  }
+
+  ServiceMeshSpec _defaultServiceMeshSpec(TopologyComponent c) {
+    return ServiceMeshSpec(
+      topologyComponentId: c.id,
+      meshType: 'istio',
+      mtlsEnabled: true,
+      circuitBreakerEnabled: true,
+      circuitBreakerThreshold: 5,
+      circuitBreakerRecoveryMs: 30000,
+      circuitBreakerHalfOpenRequests: 3,
+      retryEnabled: true,
+      retryMaxAttempts: 3,
+      loadBalancingAlgorithm: 'round_robin',
+      observabilityEnabled: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ref.read(workspaceControllerProvider.notifier);
+    return _SectionCard(
+      title: 'Service Mesh',
+      subtitle:
+          'Configure mesh type, mTLS, circuit breaker, retry, and observability.',
+      action: ElevatedButton.icon(
+        onPressed: () => controller.saveServiceMeshSpec(_draft),
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save'),
+      ),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.meshType,
+                  decoration: const InputDecoration(labelText: 'Mesh type'),
+                  items: _buildStringItems(
+                      const ['istio', 'linkerd', 'consul_connect', 'kuma']),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() => _draft = _draft.copyWith(meshType: v));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.loadBalancingAlgorithm,
+                  decoration:
+                      const InputDecoration(labelText: 'LB algorithm'),
+                  items: _buildStringItems(const [
+                    'round_robin',
+                    'least_connections',
+                    'random',
+                    'ring_hash',
+                  ]),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(loadBalancingAlgorithm: v));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('mTLS'),
+            value: _draft.mtlsEnabled,
+            onChanged: (v) =>
+                setState(() => _draft = _draft.copyWith(mtlsEnabled: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Circuit breaker'),
+            subtitle: Text(
+                'Threshold: ${_draft.circuitBreakerThreshold}, Recovery: ${_draft.circuitBreakerRecoveryMs}ms'),
+            value: _draft.circuitBreakerEnabled,
+            onChanged: (v) => setState(
+                () => _draft = _draft.copyWith(circuitBreakerEnabled: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Retry policy'),
+            subtitle: Text('Max attempts: ${_draft.retryMaxAttempts}'),
+            value: _draft.retryEnabled,
+            onChanged: (v) =>
+                setState(() => _draft = _draft.copyWith(retryEnabled: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Observability'),
+            value: _draft.observabilityEnabled,
+            onChanged: (v) => setState(
+                () => _draft = _draft.copyWith(observabilityEnabled: v)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Third-Party API Spec Editor
+// ---------------------------------------------------------------------------
+
+class _ThirdPartyApiSpecEditor extends ConsumerStatefulWidget {
+  const _ThirdPartyApiSpecEditor(
+      {required this.component, required this.state});
+  final TopologyComponent component;
+  final WorkspaceState state;
+
+  @override
+  ConsumerState<_ThirdPartyApiSpecEditor> createState() =>
+      _ThirdPartyApiSpecEditorState();
+}
+
+class _ThirdPartyApiSpecEditorState
+    extends ConsumerState<_ThirdPartyApiSpecEditor> {
+  late ThirdPartyAPISpec _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.state.thirdPartyApiSpecs[widget.component.id] ??
+        _defaultThirdPartyApiSpec(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ThirdPartyApiSpecEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final id = widget.component.id;
+    if (oldWidget.component.id != id ||
+        (oldWidget.state.thirdPartyApiSpecs[id] == null &&
+            widget.state.thirdPartyApiSpecs[id] != null)) {
+      _draft = widget.state.thirdPartyApiSpecs[id] ??
+          _defaultThirdPartyApiSpec(widget.component);
+    }
+  }
+
+  ThirdPartyAPISpec _defaultThirdPartyApiSpec(TopologyComponent c) {
+    return ThirdPartyAPISpec(
+      topologyComponentId: c.id,
+      serviceName: '',
+      baseUrl: '',
+      slaUptimePercent: 99.9,
+      expectedLatencyMs: 100,
+      fallbackBehavior: 'circuit_breaker',
+      estimatedCallsMonth: 10000,
+      costModel: 'per_call',
+      costPerCall: 0.001,
+      subscriptionCostMonthly: 0,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ref.read(workspaceControllerProvider.notifier);
+    return _SectionCard(
+      title: 'Third-Party API',
+      subtitle:
+          'Configure service details, SLA, fallback behavior, and cost model.',
+      action: ElevatedButton.icon(
+        onPressed: () => controller.saveThirdPartyApiSpec(_draft),
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save'),
+      ),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 220,
+                child: TextFormField(
+                  initialValue: _draft.serviceName,
+                  decoration:
+                      const InputDecoration(labelText: 'Service name'),
+                  onChanged: (v) => setState(
+                      () => _draft = _draft.copyWith(serviceName: v)),
+                ),
+              ),
+              SizedBox(
+                width: 300,
+                child: TextFormField(
+                  initialValue: _draft.baseUrl,
+                  decoration: const InputDecoration(labelText: 'Base URL'),
+                  onChanged: (v) =>
+                      setState(() => _draft = _draft.copyWith(baseUrl: v)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.slaUptimePercent}',
+                  decoration:
+                      const InputDecoration(labelText: 'SLA uptime %'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() =>
+                          _draft = _draft.copyWith(slaUptimePercent: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.expectedLatencyMs}',
+                  decoration:
+                      const InputDecoration(labelText: 'Expected latency (ms)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() =>
+                          _draft = _draft.copyWith(expectedLatencyMs: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.fallbackBehavior,
+                  decoration:
+                      const InputDecoration(labelText: 'Fallback'),
+                  items: _buildStringItems(const [
+                    'circuit_breaker',
+                    'retry',
+                    'cache',
+                    'degrade',
+                    'fail_open',
+                  ]),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() =>
+                          _draft = _draft.copyWith(fallbackBehavior: v));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 180,
+                child: TextFormField(
+                  initialValue: '${_draft.estimatedCallsMonth}',
+                  decoration:
+                      const InputDecoration(labelText: 'Calls/month'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = int.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(estimatedCallsMonth: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _draft.costModel,
+                  decoration:
+                      const InputDecoration(labelText: 'Cost model'),
+                  items: _buildStringItems(
+                      const ['per_call', 'subscription', 'tiered', 'free']),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(
+                          () => _draft = _draft.copyWith(costModel: v));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextFormField(
+                  initialValue: '${_draft.costPerCall}',
+                  decoration:
+                      const InputDecoration(labelText: 'Cost/call (\$)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() =>
+                          _draft = _draft.copyWith(costPerCall: val));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: TextFormField(
+                  initialValue: '${_draft.subscriptionCostMonthly}',
+                  decoration:
+                      const InputDecoration(labelText: 'Monthly sub (\$)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final val = double.tryParse(v);
+                    if (val != null) {
+                      setState(() => _draft =
+                          _draft.copyWith(subscriptionCostMonthly: val));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

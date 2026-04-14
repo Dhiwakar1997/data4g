@@ -1,3 +1,42 @@
+class MetricComparison {
+  const MetricComparison({
+    required this.metricName,
+    required this.sourceValue,
+    required this.targetValue,
+    required this.unit,
+    this.deltaPercent,
+  });
+
+  final String metricName;
+  final double sourceValue;
+  final double targetValue;
+  final String unit;
+  final double? deltaPercent;
+
+  double get delta => targetValue - sourceValue;
+  bool get isImprovement => delta < 0;
+
+  factory MetricComparison.fromJson(Map<String, dynamic> json) {
+    return MetricComparison(
+      metricName: json['metric_name'] as String? ?? '',
+      sourceValue: (json['source_value'] as num?)?.toDouble() ?? 0,
+      targetValue: (json['target_value'] as num?)?.toDouble() ?? 0,
+      unit: json['unit'] as String? ?? '',
+      deltaPercent: (json['delta_percent'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'metric_name': metricName,
+      'source_value': sourceValue,
+      'target_value': targetValue,
+      'unit': unit,
+      'delta_percent': deltaPercent,
+    };
+  }
+}
+
 class ComponentDiff {
   const ComponentDiff({
     required this.componentName,
@@ -36,6 +75,7 @@ class TopologyComparison {
     required this.removedComponents,
     required this.modifiedComponents,
     required this.unchangedComponents,
+    this.metricComparisons = const [],
   });
 
   final String sourceProjectId;
@@ -49,6 +89,7 @@ class TopologyComparison {
   final int removedComponents;
   final int modifiedComponents;
   final int unchangedComponents;
+  final List<MetricComparison> metricComparisons;
 
   factory TopologyComparison.fromJson(Map<String, dynamic> json) {
     return TopologyComparison(
@@ -65,6 +106,12 @@ class TopologyComparison {
       removedComponents: json['removed_components'] as int? ?? 0,
       modifiedComponents: json['modified_components'] as int? ?? 0,
       unchangedComponents: json['unchanged_components'] as int? ?? 0,
+      metricComparisons: (json['metric_comparisons'] as List<dynamic>? ?? [])
+          .map(
+            (item) =>
+                MetricComparison.fromJson(item as Map<String, dynamic>),
+          )
+          .toList(),
     );
   }
 }

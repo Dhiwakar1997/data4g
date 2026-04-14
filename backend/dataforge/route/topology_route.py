@@ -66,3 +66,9 @@ async def delete_topology(project_id: str, topology_id: str):
     service = TopologyService()
     await service.delete_topology(project_id, topology_id)
     return {"message": "Topology deleted", "topology_id": topology_id}
+
+
+@topology_router.post("/{topology_id}/clone", response_model=Topology)
+async def clone_topology(project_id: str, topology_id: str):
+    service = TopologyService()
+    return await service.clone_topology(project_id, topology_id)

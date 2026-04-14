@@ -1,9 +1,14 @@
 import '../models/comparison_models.dart';
 import '../models/dashboard_models.dart';
+import '../models/endpoint_models.dart';
 import '../models/project_models.dart';
 import '../models/reference_models.dart';
+import '../models/risk_models.dart';
+import '../models/share_models.dart';
 import '../models/spec_models.dart';
+import '../models/team_models.dart';
 import '../models/topology_models.dart';
+import '../models/traffic_models.dart';
 
 class DemoDataFactory {
   DemoDataFactory._();
@@ -733,6 +738,376 @@ class DemoDataFactory {
       ReferenceOption(id: 'azure', name: 'Azure'),
       ReferenceOption(id: 'gcp', name: 'GCP'),
       ReferenceOption(id: 'self_hosted', name: 'Self Hosted'),
+    ];
+  }
+
+  static ServerEndpointRegistry endpointRegistry(String componentId) {
+    return ServerEndpointRegistry(
+      topologyComponentId: componentId,
+      endpoints: [
+        const EndpointMetadata(
+          id: 'ep_get_users',
+          path: '/api/v1/users',
+          httpMethod: 'GET',
+          handlerFunction: 'listUsers',
+          sourceFile: 'src/handlers/users.go',
+          dbCalls: [
+            DBCallMetadata(
+              queryType: 'SELECT',
+              targetEntity: 'User',
+              isPaginated: true,
+              estimatedRowsAffected: '50',
+            ),
+          ],
+          cacheCalls: [
+            CacheCallMetadata(
+              operation: 'GET',
+              keyPattern: 'users:list:*',
+              ttlSeconds: 300,
+            ),
+          ],
+          serviceCalls: [],
+          queueInteractions: [],
+          riskScore: 12,
+          riskFindings: [],
+        ),
+        const EndpointMetadata(
+          id: 'ep_create_order',
+          path: '/api/v1/orders',
+          httpMethod: 'POST',
+          handlerFunction: 'createOrder',
+          sourceFile: 'src/handlers/orders.go',
+          dbCalls: [
+            DBCallMetadata(
+              queryType: 'INSERT',
+              targetEntity: 'Order',
+              isPaginated: false,
+            ),
+            DBCallMetadata(
+              queryType: 'SELECT',
+              targetEntity: 'User',
+              isPaginated: false,
+              estimatedRowsAffected: '1',
+            ),
+          ],
+          cacheCalls: [
+            CacheCallMetadata(
+              operation: 'DELETE',
+              keyPattern: 'users:orders:*',
+            ),
+          ],
+          serviceCalls: [
+            ServiceCallMetadata(
+              targetService: 'payment-service',
+              targetEndpoint: '/charge',
+              httpMethod: 'POST',
+              isAsync: false,
+            ),
+          ],
+          queueInteractions: [
+            QueueInteraction(
+              role: 'producer',
+              queueName: 'order-events',
+              messageType: 'OrderCreated',
+            ),
+          ],
+          riskScore: 45,
+          riskFindings: ['N+1 query on user lookup'],
+        ),
+        const EndpointMetadata(
+          id: 'ep_get_events',
+          path: '/api/v1/events',
+          httpMethod: 'GET',
+          handlerFunction: 'listEvents',
+          sourceFile: 'src/handlers/events.go',
+          dbCalls: [
+            DBCallMetadata(
+              queryType: 'SELECT',
+              targetEntity: 'Event',
+              isPaginated: false,
+              estimatedRowsAffected: '10000',
+            ),
+          ],
+          cacheCalls: [],
+          serviceCalls: [],
+          queueInteractions: [],
+          riskScore: 78,
+          riskFindings: ['Unbounded fetch', 'Missing pagination'],
+        ),
+      ],
+      lastSyncedAt: '2026-04-10T14:30:00Z',
+      syncVersion: 3,
+    );
+  }
+
+  static RiskDashboard riskDashboard() {
+    return const RiskDashboard(
+      projectId: 'proj_demo',
+      topologyId: 'topo_core',
+      totalEndpoints: 24,
+      analyzedEndpoints: 24,
+      overallRiskScore: 42,
+      riskDistribution: {
+        'critical': 1,
+        'high': 3,
+        'medium': 7,
+        'low': 13,
+      },
+      topRisks: [
+        EndpointRiskSummary(
+          endpointId: 'ep_get_events',
+          endpointPath: '/api/v1/events',
+          httpMethod: 'GET',
+          overallRiskScore: 78,
+          findingCount: 2,
+          criticalCount: 0,
+          highCount: 1,
+          mediumCount: 1,
+          findings: [
+            RiskFinding(
+              id: 'rf_1',
+              endpointId: 'ep_get_events',
+              endpointPath: '/api/v1/events',
+              riskType: RiskType.unboundedFetch,
+              severity: RiskSeverity.high,
+              message: 'Endpoint fetches up to 10,000 rows without LIMIT.',
+              sourceFile: 'src/handlers/events.go',
+              codeSnippet: 'db.Query("SELECT * FROM events WHERE user_id = ?")',
+              recommendation: 'Add pagination with cursor-based or offset/limit.',
+              detectedAt: '2026-04-10T14:30:00Z',
+            ),
+            RiskFinding(
+              id: 'rf_2',
+              endpointId: 'ep_get_events',
+              endpointPath: '/api/v1/events',
+              riskType: RiskType.missingPagination,
+              severity: RiskSeverity.medium,
+              message: 'No pagination parameters accepted on event listing.',
+              sourceFile: 'src/handlers/events.go',
+              recommendation: 'Accept page/limit query parameters and apply to query.',
+              detectedAt: '2026-04-10T14:30:00Z',
+            ),
+          ],
+        ),
+        EndpointRiskSummary(
+          endpointId: 'ep_create_order',
+          endpointPath: '/api/v1/orders',
+          httpMethod: 'POST',
+          overallRiskScore: 45,
+          findingCount: 1,
+          criticalCount: 0,
+          highCount: 0,
+          mediumCount: 1,
+          findings: [
+            RiskFinding(
+              id: 'rf_3',
+              endpointId: 'ep_create_order',
+              endpointPath: '/api/v1/orders',
+              riskType: RiskType.nPlusOne,
+              severity: RiskSeverity.medium,
+              message: 'User lookup inside order loop causes N+1 queries.',
+              sourceFile: 'src/handlers/orders.go',
+              recommendation: 'Batch user lookups or use JOIN.',
+              detectedAt: '2026-04-10T14:30:00Z',
+            ),
+          ],
+        ),
+      ],
+      riskByType: {
+        'n_plus_one': 4,
+        'missing_pagination': 3,
+        'unbounded_fetch': 2,
+        'full_table_scan': 1,
+        'missing_index': 1,
+      },
+      lastAnalyzedAt: '2026-04-10T14:30:00Z',
+    );
+  }
+
+  static TrafficSimulationResult trafficSimulationResult() {
+    return const TrafficSimulationResult(
+      topologyId: 'topo_core',
+      entryPointTotalQps: 2500,
+      perComponentLoad: [
+        ComponentTrafficLoad(
+          componentId: 'cmp_lb',
+          componentName: 'Traffic Gateway',
+          componentType: 'loadBalancer',
+          totalRequestsPerSecond: 2500,
+          breakdown: [
+            TrafficSource(
+              sourceEndpointId: 'ep_get_users',
+              sourceEndpointPath: '/api/v1/users',
+              requestsPerSecond: 1500,
+              multiplier: 1.0,
+            ),
+            TrafficSource(
+              sourceEndpointId: 'ep_create_order',
+              sourceEndpointPath: '/api/v1/orders',
+              requestsPerSecond: 1000,
+              multiplier: 1.0,
+            ),
+          ],
+          capacityStatus: 'OK',
+        ),
+        ComponentTrafficLoad(
+          componentId: 'cmp_api',
+          componentName: 'API Servers',
+          componentType: 'compute',
+          totalRequestsPerSecond: 2500,
+          breakdown: [],
+          capacityStatus: 'WARNING',
+          capacityReason: 'Approaching autoscaling ceiling at 2500 RPS with 6 max instances.',
+        ),
+        ComponentTrafficLoad(
+          componentId: 'cmp_db',
+          componentName: 'Primary DB',
+          componentType: 'database',
+          totalRequestsPerSecond: 3200,
+          breakdown: [],
+          capacityStatus: 'CRITICAL',
+          capacityReason: 'Connection pool exhausted at ~3000 concurrent queries. Consider read replicas.',
+        ),
+        ComponentTrafficLoad(
+          componentId: 'cmp_cache',
+          componentName: 'Redis Cache',
+          componentType: 'cache',
+          totalRequestsPerSecond: 1800,
+          breakdown: [],
+          capacityStatus: 'OK',
+        ),
+      ],
+      bottleneckComponents: ['cmp_api', 'cmp_db'],
+      estimatedMonthlyCostAtTraffic: 3420.50,
+      estimatedTotalLatencyMs: 85,
+    );
+  }
+
+  static APIGatewaySpec apiGatewaySpec(String componentId) {
+    return APIGatewaySpec(
+      topologyComponentId: componentId,
+      rateLimitEnabled: true,
+      rateLimitRps: 1000,
+      rateLimitBurst: 200,
+      rateLimitWindowSeconds: 60,
+      authType: 'jwt',
+      corsEnabled: true,
+      requestLogging: true,
+      routes: const [
+        GatewayRoute(
+          pathPattern: '/api/v1/*',
+          targetComponentId: 'cmp_api',
+          methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        ),
+        GatewayRoute(
+          pathPattern: '/health',
+          targetComponentId: 'cmp_api',
+          methods: ['GET'],
+          rateLimit: 10,
+        ),
+      ],
+      estimatedRps: 1400,
+    );
+  }
+
+  static CronJobSpec cronJobSpec(String componentId) {
+    return CronJobSpec(
+      topologyComponentId: componentId,
+      schedule: '0 */6 * * *',
+      command: 'node scripts/sync-analytics.js',
+      targetServiceId: 'cmp_api',
+      targetEndpoint: '/internal/sync',
+      timeoutSeconds: 600,
+      maxRetries: 3,
+      backoffMultiplier: 2.0,
+      estimatedDurationSeconds: 120,
+    );
+  }
+
+  static ObjectStorageSpec objectStorageSpec(String componentId) {
+    return ObjectStorageSpec(
+      topologyComponentId: componentId,
+      provider: 's3',
+      estimatedStorageGb: 500,
+      estimatedRequestsMonth: 2000000,
+      estimatedEgressGbMonth: 120,
+      accessPolicy: 'private',
+      versioningEnabled: true,
+      lifecycleRules: const [
+        'Transition to IA after 90 days',
+        'Expire incomplete multipart after 7 days',
+      ],
+    );
+  }
+
+  static ServiceMeshSpec serviceMeshSpec(String componentId) {
+    return ServiceMeshSpec(
+      topologyComponentId: componentId,
+      meshType: 'istio',
+      mtlsEnabled: true,
+      circuitBreakerEnabled: true,
+      circuitBreakerThreshold: 5,
+      circuitBreakerRecoveryMs: 30000,
+      circuitBreakerHalfOpenRequests: 3,
+      retryEnabled: true,
+      retryMaxAttempts: 3,
+      loadBalancingAlgorithm: 'round_robin',
+      observabilityEnabled: true,
+    );
+  }
+
+  static ThirdPartyAPISpec thirdPartyApiSpec(String componentId) {
+    return ThirdPartyAPISpec(
+      topologyComponentId: componentId,
+      serviceName: 'Stripe Payments',
+      baseUrl: 'https://api.stripe.com/v1',
+      slaUptimePercent: 99.99,
+      expectedLatencyMs: 180,
+      fallbackBehavior: 'circuit_breaker',
+      estimatedCallsMonth: 50000,
+      costModel: 'per_call',
+      costPerCall: 0.025,
+      subscriptionCostMonthly: 0,
+    );
+  }
+
+  static List<Team> teams() {
+    return const [
+      Team(
+        teamId: 'team-demo-1',
+        name: 'Platform Engineering',
+        ownerId: 'user_demo',
+        memberIds: ['user_demo', 'user_architect', 'user_dev'],
+        createdAt: '2026-01-15T10:00:00Z',
+      ),
+    ];
+  }
+
+  static List<TeamInvite> teamInvites() {
+    return const [
+      TeamInvite(
+        inviteId: 'inv-demo-1',
+        teamId: 'team-demo-1',
+        inviteToken: 'demo-invite-abc123',
+        maxUses: 10,
+        useCount: 2,
+        expiresAt: '2026-05-15T00:00:00Z',
+        isActive: true,
+      ),
+    ];
+  }
+
+  static List<ShareLink> shareLinks() {
+    return const [
+      ShareLink(
+        id: 'share-demo-1',
+        projectId: 'proj_demo',
+        topologyId: 'topo_core',
+        token: 'share-token-xyz789',
+        readOnly: true,
+        createdBy: 'user_demo',
+        createdAt: '2026-04-01T10:00:00Z',
+      ),
     ];
   }
 

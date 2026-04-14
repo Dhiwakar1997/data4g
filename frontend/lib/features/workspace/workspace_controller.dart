@@ -7,10 +7,13 @@ import '../../data/dataforge_repository.dart';
 import '../../data/demo_data.dart';
 import '../../models/comparison_models.dart';
 import '../../models/dashboard_models.dart';
+import '../../models/endpoint_models.dart';
 import '../../models/project_models.dart';
 import '../../models/reference_models.dart';
+import '../../models/risk_models.dart';
 import '../../models/spec_models.dart';
 import '../../models/topology_models.dart';
+import '../../models/traffic_models.dart';
 import '../auth/auth_controller.dart';
 
 const _workspaceUnset = Object();
@@ -40,6 +43,17 @@ class WorkspaceState {
     required this.dockerSpecs,
     required this.errorMessage,
     required this.infoMessage,
+    required this.riskDashboard,
+    required this.isRiskLoading,
+    required this.trafficResult,
+    required this.isTrafficLoading,
+    required this.endpointRegistries,
+    required this.apiGatewaySpecs,
+    required this.cronJobSpecs,
+    required this.objectStorageSpecs,
+    required this.serviceMeshSpecs,
+    required this.thirdPartyApiSpecs,
+    required this.lastMcpSyncAt,
   });
 
   final bool isLoading;
@@ -65,6 +79,17 @@ class WorkspaceState {
   final Map<String, DockerContainerSpec> dockerSpecs;
   final String? errorMessage;
   final String? infoMessage;
+  final RiskDashboard? riskDashboard;
+  final bool isRiskLoading;
+  final TrafficSimulationResult? trafficResult;
+  final bool isTrafficLoading;
+  final Map<String, ServerEndpointRegistry> endpointRegistries;
+  final Map<String, APIGatewaySpec> apiGatewaySpecs;
+  final Map<String, CronJobSpec> cronJobSpecs;
+  final Map<String, ObjectStorageSpec> objectStorageSpecs;
+  final Map<String, ServiceMeshSpec> serviceMeshSpecs;
+  final Map<String, ThirdPartyAPISpec> thirdPartyApiSpecs;
+  final String? lastMcpSyncAt;
 
   factory WorkspaceState.initial() {
     return const WorkspaceState(
@@ -91,6 +116,17 @@ class WorkspaceState {
       dockerSpecs: {},
       errorMessage: null,
       infoMessage: null,
+      riskDashboard: null,
+      isRiskLoading: false,
+      trafficResult: null,
+      isTrafficLoading: false,
+      endpointRegistries: {},
+      apiGatewaySpecs: {},
+      cronJobSpecs: {},
+      objectStorageSpecs: {},
+      serviceMeshSpecs: {},
+      thirdPartyApiSpecs: {},
+      lastMcpSyncAt: null,
     );
   }
 
@@ -151,6 +187,17 @@ class WorkspaceState {
     Object? infoMessage = _workspaceUnset,
     bool clearError = false,
     bool clearInfo = false,
+    Object? riskDashboard = _workspaceUnset,
+    bool? isRiskLoading,
+    Object? trafficResult = _workspaceUnset,
+    bool? isTrafficLoading,
+    Map<String, ServerEndpointRegistry>? endpointRegistries,
+    Map<String, APIGatewaySpec>? apiGatewaySpecs,
+    Map<String, CronJobSpec>? cronJobSpecs,
+    Map<String, ObjectStorageSpec>? objectStorageSpecs,
+    Map<String, ServiceMeshSpec>? serviceMeshSpecs,
+    Map<String, ThirdPartyAPISpec>? thirdPartyApiSpecs,
+    Object? lastMcpSyncAt = _workspaceUnset,
   }) {
     return WorkspaceState(
       isLoading: isLoading ?? this.isLoading,
@@ -194,6 +241,23 @@ class WorkspaceState {
           : infoMessage == _workspaceUnset
           ? this.infoMessage
           : infoMessage as String?,
+      riskDashboard: riskDashboard == _workspaceUnset
+          ? this.riskDashboard
+          : riskDashboard as RiskDashboard?,
+      isRiskLoading: isRiskLoading ?? this.isRiskLoading,
+      trafficResult: trafficResult == _workspaceUnset
+          ? this.trafficResult
+          : trafficResult as TrafficSimulationResult?,
+      isTrafficLoading: isTrafficLoading ?? this.isTrafficLoading,
+      endpointRegistries: endpointRegistries ?? this.endpointRegistries,
+      apiGatewaySpecs: apiGatewaySpecs ?? this.apiGatewaySpecs,
+      cronJobSpecs: cronJobSpecs ?? this.cronJobSpecs,
+      objectStorageSpecs: objectStorageSpecs ?? this.objectStorageSpecs,
+      serviceMeshSpecs: serviceMeshSpecs ?? this.serviceMeshSpecs,
+      thirdPartyApiSpecs: thirdPartyApiSpecs ?? this.thirdPartyApiSpecs,
+      lastMcpSyncAt: lastMcpSyncAt == _workspaceUnset
+          ? this.lastMcpSyncAt
+          : lastMcpSyncAt as String?,
     );
   }
 }
@@ -681,6 +745,236 @@ class WorkspaceController extends StateNotifier<WorkspaceState> {
     );
   }
 
+  // --- New Spec Save Methods ---
+
+  Future<void> saveApiGatewaySpec(APIGatewaySpec spec) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+    if (!state.usingDemoData) {
+      await _repository.saveApiGatewaySpec(
+        projectId, spec.topologyComponentId, spec,
+      );
+    }
+    state = state.copyWith(
+      apiGatewaySpecs: {
+        ...state.apiGatewaySpecs, spec.topologyComponentId: spec,
+      },
+      infoMessage: 'API Gateway spec updated.',
+    );
+    await refreshDashboard();
+  }
+
+  Future<void> saveCronJobSpec(CronJobSpec spec) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+    if (!state.usingDemoData) {
+      await _repository.saveCronJobSpec(
+        projectId, spec.topologyComponentId, spec,
+      );
+    }
+    state = state.copyWith(
+      cronJobSpecs: {
+        ...state.cronJobSpecs, spec.topologyComponentId: spec,
+      },
+      infoMessage: 'Cron job spec updated.',
+    );
+    await refreshDashboard();
+  }
+
+  Future<void> saveObjectStorageSpec(ObjectStorageSpec spec) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+    if (!state.usingDemoData) {
+      await _repository.saveObjectStorageSpec(
+        projectId, spec.topologyComponentId, spec,
+      );
+    }
+    state = state.copyWith(
+      objectStorageSpecs: {
+        ...state.objectStorageSpecs, spec.topologyComponentId: spec,
+      },
+      infoMessage: 'Object storage spec updated.',
+    );
+    await refreshDashboard();
+  }
+
+  Future<void> saveServiceMeshSpec(ServiceMeshSpec spec) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+    if (!state.usingDemoData) {
+      await _repository.saveServiceMeshSpec(
+        projectId, spec.topologyComponentId, spec,
+      );
+    }
+    state = state.copyWith(
+      serviceMeshSpecs: {
+        ...state.serviceMeshSpecs, spec.topologyComponentId: spec,
+      },
+      infoMessage: 'Service mesh spec updated.',
+    );
+    await refreshDashboard();
+  }
+
+  Future<void> saveThirdPartyApiSpec(ThirdPartyAPISpec spec) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+    if (!state.usingDemoData) {
+      await _repository.saveThirdPartyApiSpec(
+        projectId, spec.topologyComponentId, spec,
+      );
+    }
+    state = state.copyWith(
+      thirdPartyApiSpecs: {
+        ...state.thirdPartyApiSpecs, spec.topologyComponentId: spec,
+      },
+      infoMessage: 'Third-party API spec updated.',
+    );
+    await refreshDashboard();
+  }
+
+  // --- Risk ---
+
+  Future<void> loadRiskDashboard() async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    state = state.copyWith(isRiskLoading: true);
+    try {
+      final risk = await _loadOrFallback<RiskDashboard>(
+        load: () => _repository.getRiskDashboard(projectId),
+        fallback: () => DemoDataFactory.riskDashboard(),
+      );
+      state = state.copyWith(riskDashboard: risk, isRiskLoading: false);
+    } catch (_) {
+      state = state.copyWith(
+        isRiskLoading: false,
+        errorMessage: 'Unable to load risk analysis.',
+      );
+    }
+  }
+
+  Future<void> triggerRiskAnalysis() async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    if (!state.usingDemoData) {
+      await _repository.triggerRiskAnalysis(projectId);
+    }
+    await loadRiskDashboard();
+  }
+
+  // --- Traffic ---
+
+  Future<void> runTrafficSimulation(TrafficInput input) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    state = state.copyWith(isTrafficLoading: true);
+    try {
+      final result = await _loadOrFallback<TrafficSimulationResult>(
+        load: () => _repository.simulateTraffic(projectId, input),
+        fallback: () => DemoDataFactory.trafficSimulationResult(),
+      );
+      state = state.copyWith(trafficResult: result, isTrafficLoading: false);
+    } catch (_) {
+      state = state.copyWith(
+        isTrafficLoading: false,
+        errorMessage: 'Traffic simulation failed.',
+      );
+    }
+  }
+
+  // --- Endpoints ---
+
+  Future<void> loadEndpointRegistry(String componentId) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    if (state.endpointRegistries.containsKey(componentId)) return;
+
+    final registry = await _loadOrFallback<ServerEndpointRegistry>(
+      load: () => _repository.getEndpointRegistry(projectId, componentId),
+      fallback: () => DemoDataFactory.endpointRegistry(componentId),
+    );
+    state = state.copyWith(
+      endpointRegistries: {
+        ...state.endpointRegistries, componentId: registry,
+      },
+    );
+  }
+
+  // --- Topology Clone ---
+
+  Future<void> cloneToExperimental(String topologyId) async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    if (state.usingDemoData) {
+      final source = state.topologies.firstWhere((t) => t.id == topologyId);
+      final cloned = TopologyModel(
+        id: 'topo_${_uuid.v4()}',
+        name: '${source.name} (Experimental)',
+        deploymentMode: source.deploymentMode,
+        components: source.components,
+        edges: source.edges,
+        baseUserCount: source.baseUserCount,
+        growthTargets: source.growthTargets,
+        topologyType: TopologyType.experimental,
+        clonedFrom: source.id,
+      );
+      state = state.copyWith(
+        topologies: [...state.topologies, cloned],
+        selectedTopologyId: cloned.id,
+        infoMessage: 'Cloned topology for experimentation.',
+      );
+      return;
+    }
+
+    final cloned = await _repository.cloneTopology(projectId, topologyId);
+    state = state.copyWith(
+      topologies: [...state.topologies, cloned],
+      selectedTopologyId: cloned.id,
+      infoMessage: 'Cloned topology for experimentation.',
+    );
+  }
+
+  // --- Scan sync (agent-driven ingestion) ---
+  //
+  // Humans no longer trigger ingestion from the UI — an AI agent running
+  // `data4g-mcp` locally is the only path that writes. This helper just
+  // pulls the latest sync status so the workspace can surface "last sync"
+  // and any active sessions.
+
+  Future<void> syncFromMcp() async {
+    final projectId = state.selectedProjectId;
+    if (projectId == null) return;
+
+    if (state.usingDemoData) {
+      state = state.copyWith(
+        lastMcpSyncAt: DateTime.now().toIso8601String(),
+        infoMessage: 'Scan sync simulated in demo mode.',
+      );
+      return;
+    }
+
+    try {
+      final status = await _repository.fetchScanStatus(projectId);
+      final lastAt = status.lastSync?.syncedAt.toIso8601String();
+      state = state.copyWith(
+        lastMcpSyncAt: lastAt ?? state.lastMcpSyncAt,
+        infoMessage: status.lastSync == null
+            ? 'No scans yet — sync from your AI agent to populate the live topology.'
+            : 'Last scan: ${status.lastSync!.endpointsSynced} endpoints, '
+                '${status.lastSync!.riskFindingsCount} risks.',
+      );
+      await loadWorkspace(preferredProjectId: projectId);
+    } catch (err) {
+      state = state.copyWith(
+        errorMessage: 'Failed to refresh scan status: $err',
+      );
+    }
+  }
+
   Future<void> refreshDashboard() async {
     final projectId = state.selectedProjectId;
     if (projectId == null) {
@@ -984,6 +1278,66 @@ class WorkspaceController extends StateNotifier<WorkspaceState> {
         fallback: () => DemoDataFactory.cdnSpec(component.id),
       );
       state = state.copyWith(cdnSpecs: {...state.cdnSpecs, component.id: spec});
+      return;
+    }
+
+    if (component.type == ComponentType.apiGateway &&
+        !state.apiGatewaySpecs.containsKey(component.id)) {
+      final spec = await _loadOrFallback<APIGatewaySpec>(
+        load: () => _repository.getApiGatewaySpec(projectId, component.id),
+        fallback: () => DemoDataFactory.apiGatewaySpec(component.id),
+      );
+      state = state.copyWith(
+        apiGatewaySpecs: {...state.apiGatewaySpecs, component.id: spec},
+      );
+      return;
+    }
+
+    if (component.type == ComponentType.cronJob &&
+        !state.cronJobSpecs.containsKey(component.id)) {
+      final spec = await _loadOrFallback<CronJobSpec>(
+        load: () => _repository.getCronJobSpec(projectId, component.id),
+        fallback: () => DemoDataFactory.cronJobSpec(component.id),
+      );
+      state = state.copyWith(
+        cronJobSpecs: {...state.cronJobSpecs, component.id: spec},
+      );
+      return;
+    }
+
+    if (component.type == ComponentType.objectStore &&
+        !state.objectStorageSpecs.containsKey(component.id)) {
+      final spec = await _loadOrFallback<ObjectStorageSpec>(
+        load: () => _repository.getObjectStorageSpec(projectId, component.id),
+        fallback: () => DemoDataFactory.objectStorageSpec(component.id),
+      );
+      state = state.copyWith(
+        objectStorageSpecs: {...state.objectStorageSpecs, component.id: spec},
+      );
+      return;
+    }
+
+    if (component.type == ComponentType.serviceMesh &&
+        !state.serviceMeshSpecs.containsKey(component.id)) {
+      final spec = await _loadOrFallback<ServiceMeshSpec>(
+        load: () => _repository.getServiceMeshSpec(projectId, component.id),
+        fallback: () => DemoDataFactory.serviceMeshSpec(component.id),
+      );
+      state = state.copyWith(
+        serviceMeshSpecs: {...state.serviceMeshSpecs, component.id: spec},
+      );
+      return;
+    }
+
+    if (component.type == ComponentType.thirdPartyApi &&
+        !state.thirdPartyApiSpecs.containsKey(component.id)) {
+      final spec = await _loadOrFallback<ThirdPartyAPISpec>(
+        load: () => _repository.getThirdPartyApiSpec(projectId, component.id),
+        fallback: () => DemoDataFactory.thirdPartyApiSpec(component.id),
+      );
+      state = state.copyWith(
+        thirdPartyApiSpecs: {...state.thirdPartyApiSpecs, component.id: spec},
+      );
     }
   }
 
@@ -1120,6 +1474,6 @@ final dataForgeRepositoryProvider = Provider<DataForgeRepository>((ref) {
 
 final workspaceControllerProvider =
     StateNotifierProvider<WorkspaceController, WorkspaceState>((ref) {
-      ref.watch(authControllerProvider);
+      ref.read(authControllerProvider);
       return WorkspaceController(ref, ref.watch(dataForgeRepositoryProvider));
     });

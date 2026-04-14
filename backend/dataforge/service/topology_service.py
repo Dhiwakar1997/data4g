@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi import HTTPException
 
 from dataforge.data.repository import ProjectRepository
@@ -5,7 +7,7 @@ from dataforge.data.model import Project
 from dataforge.schemas.topology import (
     Topology, TopologyCreateRequest, TopologyUpdateRequest, TopologyListResponse,
 )
-from dataforge.schemas.enums import DeploymentMode
+from dataforge.schemas.enums import DeploymentMode, TopologyType
 
 
 class TopologyService:
@@ -94,6 +96,7 @@ class TopologyService:
         project = await self._get_or_404(project_id)
         topology = Topology(
             name=req.name,
+            topology_type=req.topology_type,
             deployment_mode=req.deployment_mode,
             components=req.components,
             edges=req.edges,
@@ -137,6 +140,13 @@ class TopologyService:
 
         topology = Topology.model_validate(topologies[topology_id])
 
+        # Guard: live topologies are read-only
+        if topology.topology_type == TopologyType.LIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Live topology is read-only. Clone to experiment.",
+            )
+
         if req.name is not None:
             topology.name = req.name
         if req.deployment_mode is not None:
@@ -161,9 +171,38 @@ class TopologyService:
         topologies = project.topologies or {}
         if topology_id not in topologies:
             raise HTTPException(status_code=404, detail="Topology not found")
+
+        topology = Topology.model_validate(topologies[topology_id])
+        if topology.topology_type == TopologyType.LIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Live topology is read-only. Clone to experiment.",
+            )
+
         del topologies[topology_id]
         project.topologies = topologies
         await self.repo.update_project(project)
+
+    # ── Clone ───────────────────────────────────────────────────
+
+    async def clone_topology(self, project_id: str, topology_id: str) -> Topology:
+        """Clone a live topology into an experimental one."""
+        project = await self._get_or_404(project_id)
+        topologies = project.topologies or {}
+        if topology_id not in topologies:
+            raise HTTPException(status_code=404, detail="Topology not found")
+
+        source = Topology.model_validate(topologies[topology_id])
+        cloned = source.model_copy(deep=True)
+        cloned.id = str(uuid4())
+        cloned.name = f"{source.name} (clone)"
+        cloned.topology_type = TopologyType.EXPERIMENTAL
+        cloned.cloned_from = topology_id
+
+        topologies[cloned.id] = cloned.model_dump(mode="json")
+        project.topologies = topologies
+        await self.repo.update_project(project)
+        return cloned
 
     # ── Helpers ──────────────────────────────────────────────────
 

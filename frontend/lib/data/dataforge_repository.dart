@@ -1,10 +1,16 @@
 import '../core/network/api_client.dart';
 import '../models/comparison_models.dart';
 import '../models/dashboard_models.dart';
+import '../models/endpoint_models.dart';
+import '../models/export_models.dart';
 import '../models/project_models.dart';
 import '../models/reference_models.dart';
+import '../models/risk_models.dart';
+import '../models/scan_models.dart';
+import '../models/share_models.dart';
 import '../models/spec_models.dart';
 import '../models/topology_models.dart';
+import '../models/traffic_models.dart';
 
 class DataForgeRepository {
   DataForgeRepository() : _client = ApiClient.instance;
@@ -328,5 +334,275 @@ class DataForgeRepository {
       data: {'user_id': userId, 'topology_ids': topologyIds},
     );
     return MemberRecord.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // --- Topology Clone ---
+
+  Future<TopologyModel> cloneTopology(
+    String projectId,
+    String topologyId,
+  ) async {
+    final response = await _client.dio.post<dynamic>(
+      '/projects/$projectId/topology/$topologyId/clone',
+    );
+    return TopologyModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // --- Endpoints (MCP-sourced) ---
+
+  Future<ServerEndpointRegistry> getEndpointRegistry(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/endpoints/$componentId',
+    );
+    return ServerEndpointRegistry.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  // --- Risk ---
+
+  Future<RiskDashboard> getRiskDashboard(String projectId) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/risk',
+    );
+    return RiskDashboard.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<EndpointRiskSummary>> getRiskEndpoints(
+    String projectId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/risk/endpoints',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return (data['endpoints'] as List<dynamic>? ?? [])
+        .map(
+          (item) =>
+              EndpointRiskSummary.fromJson(item as Map<String, dynamic>),
+        )
+        .toList();
+  }
+
+  Future<void> triggerRiskAnalysis(String projectId) async {
+    await _client.dio.post<dynamic>(
+      '/projects/$projectId/risk/analyze',
+    );
+  }
+
+  // --- Traffic Simulation ---
+
+  Future<TrafficSimulationResult> simulateTraffic(
+    String projectId,
+    TrafficInput input,
+  ) async {
+    final response = await _client.dio.post<dynamic>(
+      '/projects/$projectId/simulate/traffic',
+      data: input.toJson(),
+    );
+    return TrafficSimulationResult.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  // --- New Spec Types ---
+
+  Future<APIGatewaySpec> getApiGatewaySpec(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/specs/api-gateway/$componentId',
+    );
+    return APIGatewaySpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<APIGatewaySpec> saveApiGatewaySpec(
+    String projectId,
+    String componentId,
+    APIGatewaySpec spec,
+  ) async {
+    final response = await _client.dio.put<dynamic>(
+      '/projects/$projectId/specs/api-gateway/$componentId',
+      data: spec.toJson(),
+    );
+    return APIGatewaySpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<CronJobSpec> getCronJobSpec(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/specs/cron/$componentId',
+    );
+    return CronJobSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<CronJobSpec> saveCronJobSpec(
+    String projectId,
+    String componentId,
+    CronJobSpec spec,
+  ) async {
+    final response = await _client.dio.put<dynamic>(
+      '/projects/$projectId/specs/cron/$componentId',
+      data: spec.toJson(),
+    );
+    return CronJobSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ObjectStorageSpec> getObjectStorageSpec(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/specs/object-storage/$componentId',
+    );
+    return ObjectStorageSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ObjectStorageSpec> saveObjectStorageSpec(
+    String projectId,
+    String componentId,
+    ObjectStorageSpec spec,
+  ) async {
+    final response = await _client.dio.put<dynamic>(
+      '/projects/$projectId/specs/object-storage/$componentId',
+      data: spec.toJson(),
+    );
+    return ObjectStorageSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ServiceMeshSpec> getServiceMeshSpec(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/specs/service-mesh/$componentId',
+    );
+    return ServiceMeshSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ServiceMeshSpec> saveServiceMeshSpec(
+    String projectId,
+    String componentId,
+    ServiceMeshSpec spec,
+  ) async {
+    final response = await _client.dio.put<dynamic>(
+      '/projects/$projectId/specs/service-mesh/$componentId',
+      data: spec.toJson(),
+    );
+    return ServiceMeshSpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ThirdPartyAPISpec> getThirdPartyApiSpec(
+    String projectId,
+    String componentId,
+  ) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/specs/third-party/$componentId',
+    );
+    return ThirdPartyAPISpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ThirdPartyAPISpec> saveThirdPartyApiSpec(
+    String projectId,
+    String componentId,
+    ThirdPartyAPISpec spec,
+  ) async {
+    final response = await _client.dio.put<dynamic>(
+      '/projects/$projectId/specs/third-party/$componentId',
+      data: spec.toJson(),
+    );
+    return ThirdPartyAPISpec.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // --- Export ---
+
+  Future<ExportResponse> requestExport(ExportRequest request) async {
+    final response = await _client.dio.post<dynamic>(
+      '/projects/${request.projectId}/export',
+      data: request.toJson(),
+    );
+    return ExportResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // --- Share ---
+
+  Future<ShareLink> createShareLink({
+    required String projectId,
+    String? topologyId,
+    int? expiresInDays,
+  }) async {
+    final response = await _client.dio.post<dynamic>(
+      '/share',
+      data: {
+        'project_id': projectId,
+        if (topologyId != null) 'topology_id': topologyId,
+        if (expiresInDays != null) 'expires_in_days': expiresInDays,
+      },
+    );
+    return ShareLink.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ShareLink> getShareLink(String token) async {
+    final response = await _client.dio.get<dynamic>('/share/$token');
+    return ShareLink.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<ShareLink>> listShareLinks(String projectId) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/share-links',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return (data['links'] as List<dynamic>? ?? [])
+        .map((item) => ShareLink.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  // --- Scan sync (agent-driven MCP ingestion) ---
+
+  Future<ScanStatus> fetchScanStatus(String projectId) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/scan/status',
+    );
+    return ScanStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // --- Project API keys ---
+
+  Future<List<ProjectApiKeySummary>> listApiKeys(
+    String projectId, {
+    bool includeRevoked = false,
+  }) async {
+    final response = await _client.dio.get<dynamic>(
+      '/projects/$projectId/keys',
+      queryParameters: {'include_revoked': includeRevoked},
+    );
+    return (response.data as List<dynamic>)
+        .map((item) =>
+            ProjectApiKeySummary.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ProjectApiKeyCreated> createApiKey(
+    String projectId, {
+    required String label,
+  }) async {
+    final response = await _client.dio.post<dynamic>(
+      '/projects/$projectId/keys',
+      data: {'label': label},
+    );
+    return ProjectApiKeyCreated.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> revokeApiKey(String projectId, String keyId) async {
+    await _client.dio.delete<dynamic>(
+      '/projects/$projectId/keys/$keyId',
+    );
   }
 }

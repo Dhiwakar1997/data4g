@@ -37,3 +37,20 @@ class TopologyCompareResponse(BaseModel):
     removed_components: int = 0
     modified_components: int = 0
     unchanged_components: int = 0
+
+
+class MetricComparison(BaseModel):
+    topology_a_id: str
+    topology_a_name: str
+    topology_b_id: str
+    topology_b_name: str
+    cost_a: float
+    cost_b: float
+    cost_delta: float
+    cost_delta_percentage: float
+    risk_score_a: float = 0.0
+    risk_score_b: float = 0.0
+    performance_a: dict = Field(default_factory=dict)
+    performance_b: dict = Field(default_factory=dict)
+    component_count_a: int = 0
+    component_count_b: int = 0

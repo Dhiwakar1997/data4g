@@ -996,3 +996,469 @@ class DockerContainerSpec {
     );
   }
 }
+
+// --- New Spec Types ---
+
+class GatewayRoute {
+  const GatewayRoute({
+    required this.pathPattern,
+    required this.targetComponentId,
+    required this.methods,
+    this.rateLimit,
+  });
+
+  final String pathPattern;
+  final String targetComponentId;
+  final List<String> methods;
+  final int? rateLimit;
+
+  factory GatewayRoute.fromJson(Map<String, dynamic> json) {
+    return GatewayRoute(
+      pathPattern: json['path_pattern'] as String? ?? '',
+      targetComponentId: json['target_component_id'] as String? ?? '',
+      methods: (json['methods'] as List<dynamic>? ?? ['GET'])
+          .map((item) => item.toString())
+          .toList(),
+      rateLimit: json['rate_limit'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'path_pattern': pathPattern,
+      'target_component_id': targetComponentId,
+      'methods': methods,
+      'rate_limit': rateLimit,
+    };
+  }
+}
+
+class APIGatewaySpec {
+  const APIGatewaySpec({
+    required this.topologyComponentId,
+    required this.rateLimitEnabled,
+    required this.rateLimitRps,
+    required this.rateLimitBurst,
+    required this.rateLimitWindowSeconds,
+    required this.authType,
+    required this.corsEnabled,
+    required this.requestLogging,
+    required this.routes,
+    required this.estimatedRps,
+  });
+
+  final String topologyComponentId;
+  final bool rateLimitEnabled;
+  final int rateLimitRps;
+  final int rateLimitBurst;
+  final int rateLimitWindowSeconds;
+  final String authType;
+  final bool corsEnabled;
+  final bool requestLogging;
+  final List<GatewayRoute> routes;
+  final double estimatedRps;
+
+  factory APIGatewaySpec.fromJson(Map<String, dynamic> json) {
+    final rateLimit = json['rate_limit'] as Map<String, dynamic>? ?? const {};
+    return APIGatewaySpec(
+      topologyComponentId: json['topology_component_id'] as String? ?? '',
+      rateLimitEnabled: rateLimit['enabled'] as bool? ?? true,
+      rateLimitRps: rateLimit['rps'] as int? ?? 1000,
+      rateLimitBurst: rateLimit['burst'] as int? ?? 100,
+      rateLimitWindowSeconds: rateLimit['window_seconds'] as int? ?? 60,
+      authType: json['auth_type'] as String? ?? 'jwt',
+      corsEnabled: json['cors_enabled'] as bool? ?? true,
+      requestLogging: json['request_logging'] as bool? ?? true,
+      routes: (json['routes'] as List<dynamic>? ?? [])
+          .map((item) => GatewayRoute.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      estimatedRps: (json['estimated_rps'] as num?)?.toDouble() ?? 500,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'topology_component_id': topologyComponentId,
+      'rate_limit': {
+        'enabled': rateLimitEnabled,
+        'rps': rateLimitRps,
+        'burst': rateLimitBurst,
+        'window_seconds': rateLimitWindowSeconds,
+      },
+      'auth_type': authType,
+      'cors_enabled': corsEnabled,
+      'request_logging': requestLogging,
+      'routes': routes.map((item) => item.toJson()).toList(),
+      'estimated_rps': estimatedRps,
+    };
+  }
+
+  APIGatewaySpec copyWith({
+    bool? rateLimitEnabled,
+    int? rateLimitRps,
+    int? rateLimitBurst,
+    int? rateLimitWindowSeconds,
+    String? authType,
+    bool? corsEnabled,
+    bool? requestLogging,
+    List<GatewayRoute>? routes,
+    double? estimatedRps,
+  }) {
+    return APIGatewaySpec(
+      topologyComponentId: topologyComponentId,
+      rateLimitEnabled: rateLimitEnabled ?? this.rateLimitEnabled,
+      rateLimitRps: rateLimitRps ?? this.rateLimitRps,
+      rateLimitBurst: rateLimitBurst ?? this.rateLimitBurst,
+      rateLimitWindowSeconds:
+          rateLimitWindowSeconds ?? this.rateLimitWindowSeconds,
+      authType: authType ?? this.authType,
+      corsEnabled: corsEnabled ?? this.corsEnabled,
+      requestLogging: requestLogging ?? this.requestLogging,
+      routes: routes ?? this.routes,
+      estimatedRps: estimatedRps ?? this.estimatedRps,
+    );
+  }
+}
+
+class CronJobSpec {
+  const CronJobSpec({
+    required this.topologyComponentId,
+    required this.schedule,
+    required this.command,
+    required this.targetServiceId,
+    required this.targetEndpoint,
+    required this.timeoutSeconds,
+    required this.maxRetries,
+    required this.backoffMultiplier,
+    required this.estimatedDurationSeconds,
+  });
+
+  final String topologyComponentId;
+  final String schedule;
+  final String command;
+  final String targetServiceId;
+  final String targetEndpoint;
+  final int timeoutSeconds;
+  final int maxRetries;
+  final double backoffMultiplier;
+  final int estimatedDurationSeconds;
+
+  factory CronJobSpec.fromJson(Map<String, dynamic> json) {
+    final retry = json['retry_policy'] as Map<String, dynamic>? ?? const {};
+    return CronJobSpec(
+      topologyComponentId: json['topology_component_id'] as String? ?? '',
+      schedule: json['schedule'] as String? ?? '0 */6 * * *',
+      command: json['command'] as String? ?? '',
+      targetServiceId: json['target_service_id'] as String? ?? '',
+      targetEndpoint: json['target_endpoint'] as String? ?? '',
+      timeoutSeconds: json['timeout_seconds'] as int? ?? 300,
+      maxRetries: retry['max_retries'] as int? ?? 3,
+      backoffMultiplier:
+          (retry['backoff_multiplier'] as num?)?.toDouble() ?? 2.0,
+      estimatedDurationSeconds:
+          json['estimated_duration_seconds'] as int? ?? 60,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'topology_component_id': topologyComponentId,
+      'schedule': schedule,
+      'command': command,
+      'target_service_id': targetServiceId,
+      'target_endpoint': targetEndpoint,
+      'timeout_seconds': timeoutSeconds,
+      'retry_policy': {
+        'max_retries': maxRetries,
+        'backoff_multiplier': backoffMultiplier,
+      },
+      'estimated_duration_seconds': estimatedDurationSeconds,
+    };
+  }
+
+  CronJobSpec copyWith({
+    String? schedule,
+    String? command,
+    String? targetServiceId,
+    String? targetEndpoint,
+    int? timeoutSeconds,
+    int? maxRetries,
+    double? backoffMultiplier,
+    int? estimatedDurationSeconds,
+  }) {
+    return CronJobSpec(
+      topologyComponentId: topologyComponentId,
+      schedule: schedule ?? this.schedule,
+      command: command ?? this.command,
+      targetServiceId: targetServiceId ?? this.targetServiceId,
+      targetEndpoint: targetEndpoint ?? this.targetEndpoint,
+      timeoutSeconds: timeoutSeconds ?? this.timeoutSeconds,
+      maxRetries: maxRetries ?? this.maxRetries,
+      backoffMultiplier: backoffMultiplier ?? this.backoffMultiplier,
+      estimatedDurationSeconds:
+          estimatedDurationSeconds ?? this.estimatedDurationSeconds,
+    );
+  }
+}
+
+class ObjectStorageSpec {
+  const ObjectStorageSpec({
+    required this.topologyComponentId,
+    required this.provider,
+    required this.estimatedStorageGb,
+    required this.estimatedRequestsMonth,
+    required this.estimatedEgressGbMonth,
+    required this.accessPolicy,
+    required this.versioningEnabled,
+    required this.lifecycleRules,
+  });
+
+  final String topologyComponentId;
+  final String provider;
+  final double estimatedStorageGb;
+  final double estimatedRequestsMonth;
+  final double estimatedEgressGbMonth;
+  final String accessPolicy;
+  final bool versioningEnabled;
+  final List<String> lifecycleRules;
+
+  factory ObjectStorageSpec.fromJson(Map<String, dynamic> json) {
+    return ObjectStorageSpec(
+      topologyComponentId: json['topology_component_id'] as String? ?? '',
+      provider: json['provider'] as String? ?? 's3',
+      estimatedStorageGb:
+          (json['estimated_storage_gb'] as num?)?.toDouble() ?? 100,
+      estimatedRequestsMonth:
+          (json['estimated_requests_month'] as num?)?.toDouble() ?? 1000000,
+      estimatedEgressGbMonth:
+          (json['estimated_egress_gb_month'] as num?)?.toDouble() ?? 50,
+      accessPolicy: json['access_policy'] as String? ?? 'private',
+      versioningEnabled: json['versioning_enabled'] as bool? ?? false,
+      lifecycleRules: (json['lifecycle_rules'] as List<dynamic>? ?? [])
+          .map((item) => item.toString())
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'topology_component_id': topologyComponentId,
+      'provider': provider,
+      'estimated_storage_gb': estimatedStorageGb,
+      'estimated_requests_month': estimatedRequestsMonth,
+      'estimated_egress_gb_month': estimatedEgressGbMonth,
+      'access_policy': accessPolicy,
+      'versioning_enabled': versioningEnabled,
+      'lifecycle_rules': lifecycleRules,
+    };
+  }
+
+  ObjectStorageSpec copyWith({
+    String? provider,
+    double? estimatedStorageGb,
+    double? estimatedRequestsMonth,
+    double? estimatedEgressGbMonth,
+    String? accessPolicy,
+    bool? versioningEnabled,
+    List<String>? lifecycleRules,
+  }) {
+    return ObjectStorageSpec(
+      topologyComponentId: topologyComponentId,
+      provider: provider ?? this.provider,
+      estimatedStorageGb: estimatedStorageGb ?? this.estimatedStorageGb,
+      estimatedRequestsMonth:
+          estimatedRequestsMonth ?? this.estimatedRequestsMonth,
+      estimatedEgressGbMonth:
+          estimatedEgressGbMonth ?? this.estimatedEgressGbMonth,
+      accessPolicy: accessPolicy ?? this.accessPolicy,
+      versioningEnabled: versioningEnabled ?? this.versioningEnabled,
+      lifecycleRules: lifecycleRules ?? this.lifecycleRules,
+    );
+  }
+}
+
+class ServiceMeshSpec {
+  const ServiceMeshSpec({
+    required this.topologyComponentId,
+    required this.meshType,
+    required this.mtlsEnabled,
+    required this.circuitBreakerEnabled,
+    required this.circuitBreakerThreshold,
+    required this.circuitBreakerRecoveryMs,
+    required this.circuitBreakerHalfOpenRequests,
+    required this.retryEnabled,
+    required this.retryMaxAttempts,
+    required this.loadBalancingAlgorithm,
+    required this.observabilityEnabled,
+  });
+
+  final String topologyComponentId;
+  final String meshType;
+  final bool mtlsEnabled;
+  final bool circuitBreakerEnabled;
+  final int circuitBreakerThreshold;
+  final int circuitBreakerRecoveryMs;
+  final int circuitBreakerHalfOpenRequests;
+  final bool retryEnabled;
+  final int retryMaxAttempts;
+  final String loadBalancingAlgorithm;
+  final bool observabilityEnabled;
+
+  factory ServiceMeshSpec.fromJson(Map<String, dynamic> json) {
+    final cb =
+        json['circuit_breaker'] as Map<String, dynamic>? ?? const {};
+    final retry = json['retry_policy'] as Map<String, dynamic>? ?? const {};
+    return ServiceMeshSpec(
+      topologyComponentId: json['topology_component_id'] as String? ?? '',
+      meshType: json['mesh_type'] as String? ?? 'istio',
+      mtlsEnabled: json['mtls_enabled'] as bool? ?? true,
+      circuitBreakerEnabled: cb['enabled'] as bool? ?? true,
+      circuitBreakerThreshold: cb['threshold'] as int? ?? 5,
+      circuitBreakerRecoveryMs: cb['recovery_ms'] as int? ?? 30000,
+      circuitBreakerHalfOpenRequests: cb['half_open_requests'] as int? ?? 3,
+      retryEnabled: retry['enabled'] as bool? ?? true,
+      retryMaxAttempts: retry['max_attempts'] as int? ?? 3,
+      loadBalancingAlgorithm:
+          json['load_balancing_algorithm'] as String? ?? 'round_robin',
+      observabilityEnabled: json['observability_enabled'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'topology_component_id': topologyComponentId,
+      'mesh_type': meshType,
+      'mtls_enabled': mtlsEnabled,
+      'circuit_breaker': {
+        'enabled': circuitBreakerEnabled,
+        'threshold': circuitBreakerThreshold,
+        'recovery_ms': circuitBreakerRecoveryMs,
+        'half_open_requests': circuitBreakerHalfOpenRequests,
+      },
+      'retry_policy': {
+        'enabled': retryEnabled,
+        'max_attempts': retryMaxAttempts,
+      },
+      'load_balancing_algorithm': loadBalancingAlgorithm,
+      'observability_enabled': observabilityEnabled,
+    };
+  }
+
+  ServiceMeshSpec copyWith({
+    String? meshType,
+    bool? mtlsEnabled,
+    bool? circuitBreakerEnabled,
+    int? circuitBreakerThreshold,
+    int? circuitBreakerRecoveryMs,
+    int? circuitBreakerHalfOpenRequests,
+    bool? retryEnabled,
+    int? retryMaxAttempts,
+    String? loadBalancingAlgorithm,
+    bool? observabilityEnabled,
+  }) {
+    return ServiceMeshSpec(
+      topologyComponentId: topologyComponentId,
+      meshType: meshType ?? this.meshType,
+      mtlsEnabled: mtlsEnabled ?? this.mtlsEnabled,
+      circuitBreakerEnabled:
+          circuitBreakerEnabled ?? this.circuitBreakerEnabled,
+      circuitBreakerThreshold:
+          circuitBreakerThreshold ?? this.circuitBreakerThreshold,
+      circuitBreakerRecoveryMs:
+          circuitBreakerRecoveryMs ?? this.circuitBreakerRecoveryMs,
+      circuitBreakerHalfOpenRequests:
+          circuitBreakerHalfOpenRequests ?? this.circuitBreakerHalfOpenRequests,
+      retryEnabled: retryEnabled ?? this.retryEnabled,
+      retryMaxAttempts: retryMaxAttempts ?? this.retryMaxAttempts,
+      loadBalancingAlgorithm:
+          loadBalancingAlgorithm ?? this.loadBalancingAlgorithm,
+      observabilityEnabled: observabilityEnabled ?? this.observabilityEnabled,
+    );
+  }
+}
+
+class ThirdPartyAPISpec {
+  const ThirdPartyAPISpec({
+    required this.topologyComponentId,
+    required this.serviceName,
+    required this.baseUrl,
+    required this.slaUptimePercent,
+    required this.expectedLatencyMs,
+    required this.fallbackBehavior,
+    required this.estimatedCallsMonth,
+    required this.costModel,
+    required this.costPerCall,
+    required this.subscriptionCostMonthly,
+  });
+
+  final String topologyComponentId;
+  final String serviceName;
+  final String baseUrl;
+  final double slaUptimePercent;
+  final double expectedLatencyMs;
+  final String fallbackBehavior;
+  final int estimatedCallsMonth;
+  final String costModel;
+  final double costPerCall;
+  final double subscriptionCostMonthly;
+
+  factory ThirdPartyAPISpec.fromJson(Map<String, dynamic> json) {
+    return ThirdPartyAPISpec(
+      topologyComponentId: json['topology_component_id'] as String? ?? '',
+      serviceName: json['service_name'] as String? ?? '',
+      baseUrl: json['base_url'] as String? ?? '',
+      slaUptimePercent:
+          (json['sla_uptime_percent'] as num?)?.toDouble() ?? 99.9,
+      expectedLatencyMs:
+          (json['expected_latency_ms'] as num?)?.toDouble() ?? 100,
+      fallbackBehavior:
+          json['fallback_behavior'] as String? ?? 'circuit_breaker',
+      estimatedCallsMonth: json['estimated_calls_month'] as int? ?? 10000,
+      costModel: json['cost_model'] as String? ?? 'per_call',
+      costPerCall: (json['cost_per_call'] as num?)?.toDouble() ?? 0.001,
+      subscriptionCostMonthly:
+          (json['subscription_cost_monthly'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'topology_component_id': topologyComponentId,
+      'service_name': serviceName,
+      'base_url': baseUrl,
+      'sla_uptime_percent': slaUptimePercent,
+      'expected_latency_ms': expectedLatencyMs,
+      'fallback_behavior': fallbackBehavior,
+      'estimated_calls_month': estimatedCallsMonth,
+      'cost_model': costModel,
+      'cost_per_call': costPerCall,
+      'subscription_cost_monthly': subscriptionCostMonthly,
+    };
+  }
+
+  ThirdPartyAPISpec copyWith({
+    String? serviceName,
+    String? baseUrl,
+    double? slaUptimePercent,
+    double? expectedLatencyMs,
+    String? fallbackBehavior,
+    int? estimatedCallsMonth,
+    String? costModel,
+    double? costPerCall,
+    double? subscriptionCostMonthly,
+  }) {
+    return ThirdPartyAPISpec(
+      topologyComponentId: topologyComponentId,
+      serviceName: serviceName ?? this.serviceName,
+      baseUrl: baseUrl ?? this.baseUrl,
+      slaUptimePercent: slaUptimePercent ?? this.slaUptimePercent,
+      expectedLatencyMs: expectedLatencyMs ?? this.expectedLatencyMs,
+      fallbackBehavior: fallbackBehavior ?? this.fallbackBehavior,
+      estimatedCallsMonth: estimatedCallsMonth ?? this.estimatedCallsMonth,
+      costModel: costModel ?? this.costModel,
+      costPerCall: costPerCall ?? this.costPerCall,
+      subscriptionCostMonthly:
+          subscriptionCostMonthly ?? this.subscriptionCostMonthly,
+    );
+  }
+}

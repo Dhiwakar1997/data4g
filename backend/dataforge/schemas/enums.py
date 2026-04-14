@@ -25,6 +25,11 @@ class DeploymentMode(str, Enum):
     DISTRIBUTED = "distributed"
 
 
+class TopologyType(str, Enum):
+    LIVE = "live"
+    EXPERIMENTAL = "experimental"
+
+
 class ComponentType(str, Enum):
     COMPUTE = "compute"
     DATABASE = "database"
@@ -34,6 +39,34 @@ class ComponentType(str, Enum):
     CLIENT = "client"
     OBJECT_STORE = "object_store"
     MESSAGE_QUEUE = "message_queue"
+    API_GATEWAY = "api_gateway"
+    CRON_JOB = "cron_job"
+    THIRD_PARTY_API = "third_party_api"
+    SERVICE_MESH = "service_mesh"
+    KUBERNETES_NODE = "kubernetes_node"
+
+
+class RiskSeverity(str, Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    INFO = "info"
+
+
+class RiskType(str, Enum):
+    N_PLUS_ONE = "n_plus_one"
+    MISSING_PAGINATION = "missing_pagination"
+    UNBOUNDED_FETCH = "unbounded_fetch"
+    FULL_TABLE_SCAN = "full_table_scan"
+    MISSING_INDEX = "missing_index"
+    INEFFICIENT_JOIN = "inefficient_join"
+    RACE_CONDITION = "race_condition"
+
+
+class SyncMode(str, Enum):
+    ON_DEMAND = "on_demand"
+    CI_CD = "ci_cd"
 
 
 # ── Database identifiers across all 7 categories ───────────────

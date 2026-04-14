@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from core.middleware import verify_access_token
 from dataforge.schemas.dashboard import (
     ConsolidatedDashboard, GrowthProjection,
     EntityCostDetail, OptimizationHint, CompareRequest,
@@ -7,6 +8,7 @@ from dataforge.schemas.dashboard import (
 from dataforge.schemas.compute import ComputeCostBreakdown
 from dataforge.schemas.db_model import DBCostBreakdown
 from dataforge.schemas.cache_spec import CacheCostBreakdown
+from dataforge.schemas.traffic import TrafficInput, TrafficSimulationResult
 from dataforge.service.cost_engine import CostEngine
 
 cost_router = APIRouter(prefix="/projects/{project_id}/cost", tags=["cost"])
@@ -60,3 +62,45 @@ async def get_db_cost(project_id: str, component_id: str):
 async def get_cache_cost(project_id: str, component_id: str):
     engine = CostEngine()
     return await engine.get_cache_cost(project_id, component_id)
+
+
+# ── Traffic Simulation ─────────────────────────────────────────
+
+@cost_router.post("/simulate/traffic", response_model=TrafficSimulationResult)
+async def simulate_traffic(
+    project_id: str,
+    req: TrafficInput,
+    _: str = Depends(verify_access_token),
+):
+    from dataforge.data.repository import ProjectRepository, EndpointRegistryRepository
+    from dataforge.schemas.topology import Topology
+    from dataforge.schemas.endpoint_metadata import ServerEndpointRegistry
+    from dataforge.service.traffic_simulator import TrafficSimulator
+
+    repo = ProjectRepository()
+    project = await repo.get_project_by_id(project_id)
+    if not project or not project.topology:
+        return TrafficSimulationResult(
+            topology_id="", entry_point_total_qps=0,
+        )
+    topology = Topology.model_validate(project.topology)
+
+    endpoint_repo = EndpointRegistryRepository()
+    registries = await endpoint_repo.list_by_topology(project_id, topology.id)
+    registry_map = {}
+    for reg in registries:
+        registry_map[reg.component_id] = ServerEndpointRegistry(
+            topology_component_id=reg.component_id,
+            endpoints=[],
+        )
+
+    simulator = TrafficSimulator(topology, registry_map)
+    return simulator.simulate(req.entry_points)
+
+
+@cost_router.get("/simulate/bottlenecks")
+async def get_bottlenecks(
+    project_id: str,
+    _: str = Depends(verify_access_token),
+):
+    return {"project_id": project_id, "bottlenecks": [], "message": "Run traffic simulation first"}

@@ -12,11 +12,21 @@ async def init_db():
 
     # Import document models here to avoid circular imports
     from users.data.model import User
-    from dataforge.data.model import Project, ProjectMember
+    from dataforge.data.model import (
+        Project, ProjectMember,
+        EndpointRegistry, RiskReport, CloudPricing, ShareLink, ScanSyncLog,
+        ProjectApiKey, ScanSession,
+    )
+    from teams.data.model import Team, TeamInvite
 
     await init_beanie(
         connection_string=f"{settings.MONGODB_URI}/{settings.MONGODB_DB_NAME}",
-        document_models=[User, Project, ProjectMember],
+        document_models=[
+            User, Project, ProjectMember,
+            Team, TeamInvite,
+            EndpointRegistry, RiskReport, CloudPricing, ShareLink, ScanSyncLog,
+            ProjectApiKey, ScanSession,
+        ],
     )
 
 

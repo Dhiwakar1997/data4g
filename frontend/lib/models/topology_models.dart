@@ -87,6 +87,27 @@ extension DeploymentModeX on DeploymentMode {
   }
 }
 
+enum TopologyType { live, experimental }
+
+extension TopologyTypeX on TopologyType {
+  String get value => switch (this) {
+    TopologyType.live => 'live',
+    TopologyType.experimental => 'experimental',
+  };
+
+  String get label => switch (this) {
+    TopologyType.live => 'Live',
+    TopologyType.experimental => 'Experimental',
+  };
+
+  static TopologyType fromValue(String? value) {
+    return TopologyType.values.firstWhere(
+      (t) => t.value == value,
+      orElse: () => TopologyType.live,
+    );
+  }
+}
+
 enum ComponentType {
   compute,
   database,
@@ -96,6 +117,10 @@ enum ComponentType {
   client,
   objectStore,
   messageQueue,
+  apiGateway,
+  cronJob,
+  serviceMesh,
+  thirdPartyApi,
 }
 
 extension ComponentTypeX on ComponentType {
@@ -108,6 +133,10 @@ extension ComponentTypeX on ComponentType {
     ComponentType.client => 'client',
     ComponentType.objectStore => 'object_store',
     ComponentType.messageQueue => 'message_queue',
+    ComponentType.apiGateway => 'api_gateway',
+    ComponentType.cronJob => 'cron_job',
+    ComponentType.serviceMesh => 'service_mesh',
+    ComponentType.thirdPartyApi => 'third_party_api',
   };
 
   String get label => switch (this) {
@@ -119,6 +148,10 @@ extension ComponentTypeX on ComponentType {
     ComponentType.client => 'Client',
     ComponentType.objectStore => 'Storage',
     ComponentType.messageQueue => 'Queue',
+    ComponentType.apiGateway => 'API Gateway',
+    ComponentType.cronJob => 'Cron Job',
+    ComponentType.serviceMesh => 'Service Mesh',
+    ComponentType.thirdPartyApi => 'Third-party API',
   };
 
   static ComponentType fromValue(String? value) {
@@ -261,6 +294,10 @@ class TopologyModel {
     required this.edges,
     required this.baseUserCount,
     required this.growthTargets,
+    this.topologyType = TopologyType.live,
+    this.clonedFrom,
+    this.lastSyncedAt,
+    this.syncVersion,
   });
 
   final String id;
@@ -270,6 +307,13 @@ class TopologyModel {
   final List<TopologyEdge> edges;
   final int baseUserCount;
   final List<int> growthTargets;
+  final TopologyType topologyType;
+  final String? clonedFrom;
+  final String? lastSyncedAt;
+  final int? syncVersion;
+
+  bool get isLive => topologyType == TopologyType.live;
+  bool get isExperimental => topologyType == TopologyType.experimental;
 
   factory TopologyModel.fromJson(Map<String, dynamic> json) {
     return TopologyModel(
@@ -292,6 +336,12 @@ class TopologyModel {
                   const [1000, 10000, 100000, 1000000])
               .map((item) => (item as num).toInt())
               .toList(),
+      topologyType: TopologyTypeX.fromValue(
+        json['topology_type'] as String?,
+      ),
+      clonedFrom: json['cloned_from'] as String?,
+      lastSyncedAt: json['last_synced_at'] as String?,
+      syncVersion: json['sync_version'] as int?,
     );
   }
 
@@ -304,6 +354,10 @@ class TopologyModel {
       'edges': edges.map((item) => item.toJson()).toList(),
       'base_user_count': baseUserCount,
       'growth_targets': growthTargets,
+      'topology_type': topologyType.value,
+      'cloned_from': clonedFrom,
+      'last_synced_at': lastSyncedAt,
+      'sync_version': syncVersion,
     };
   }
 
@@ -314,6 +368,10 @@ class TopologyModel {
     List<TopologyEdge>? edges,
     int? baseUserCount,
     List<int>? growthTargets,
+    TopologyType? topologyType,
+    String? clonedFrom,
+    String? lastSyncedAt,
+    int? syncVersion,
   }) {
     return TopologyModel(
       id: id,
@@ -323,6 +381,10 @@ class TopologyModel {
       edges: edges ?? this.edges,
       baseUserCount: baseUserCount ?? this.baseUserCount,
       growthTargets: growthTargets ?? this.growthTargets,
+      topologyType: topologyType ?? this.topologyType,
+      clonedFrom: clonedFrom ?? this.clonedFrom,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      syncVersion: syncVersion ?? this.syncVersion,
     );
   }
 }
